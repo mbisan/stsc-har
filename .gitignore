@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+datasets
+cache*
+lightning_logs
+training/*
+
+test.ipynb
