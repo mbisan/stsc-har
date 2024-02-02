@@ -54,6 +54,10 @@ class WrapperModel(LightningModule):
             ref_size, channels = 1, enc_feats
             self.wdw_len = 1
             self.dsrc = "series"
+        elif mode == "dtwfeats_c":
+            ref_size, channels = n_dims, enc_feats
+            self.wdw_len = 1
+            self.dsrc = "series"
         elif mode in ["mtf", "gasf", "gadf", "cwt_test"]:
             ref_size, channels = wdw_len, n_dims
             self.dsrc = "transformed"
@@ -61,7 +65,7 @@ class WrapperModel(LightningModule):
         self.initial_transform = None
         if mode in ["dtw", "dtw_c"]:
             self.initial_transform = dtw_mode[mode](n_patts=enc_feats, d_patts=n_dims, l_patts=l_patterns, l_out=wdw_len-l_patterns, rho=self.voting["rho"]/10)
-        elif mode == "dtwfeats":
+        elif mode == "dtwfeats" or mode == "dtwfeats_c":
             self.initial_transform = dtw_mode[mode](n_patts=enc_feats, d_patts=n_dims, l_patts=l_patterns, l_out=wdw_len-l_patterns, rho=self.voting["rho"])
 
         self.encoder = encoder_dict[encoder_arch](channels=channels, ref_size=ref_size, 

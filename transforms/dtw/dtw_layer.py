@@ -3,6 +3,7 @@ import torch
 from transforms.dtw.dtw import torch_dtw
 from transforms.dtw.dtw_per_channel import torch_dtw_per_channel
 from transforms.dtw.dtw_pycuda import torch_dtw_cuda
+from transforms.dtw.dtw_pycuda_per_channel import torch_dtw_cuda_c
 
 class DTWLayer(torch.nn.Module):
     def __init__(self, n_patts, d_patts, l_patts, l_out: int = None, rho: float = 1) -> None:
@@ -44,4 +45,15 @@ class DTWFeatures(torch.nn.Module):
     
     def forward(self, x):
         x = torch_dtw_cuda.apply(x, self.patts, self.w)
+        return x.sqrt()
+    
+class DTWFeatures_c(torch.nn.Module):
+    def __init__(self, n_patts, d_patts, l_patts, l_out: int = 0, rho: float = 1) -> None:
+        super().__init__()
+
+        self.w: torch.float32 = rho ** (1/l_patts)
+        self.patts = torch.nn.Parameter(torch.randn(n_patts, l_patts))
+    
+    def forward(self, x):
+        x = torch_dtw_cuda_c.apply(x, self.patts, self.w)
         return x.sqrt()
