@@ -1,9 +1,9 @@
-from encoders.CNN_GAP_img import CNN_GAP_IMG
-from encoders.CNN_GAP_ts import CNN_GAP_TS
-from encoders.encoders import RemoveUpperPart, NoLayer
-from encoders.transformer import Transformer
+from nets.encoders.CNN_GAP_img import CNN_GAP_IMG
+from nets.encoders.CNN_GAP_ts import CNN_GAP_TS
+from nets.encoders.encoders import RemoveUpperPart, NoLayer
+from nets.encoders.transformer import Transformer
 
-from decoders.mlp import MultiLayerPerceptron
+from nets.decoders.mlp import MultiLayerPerceptron
 
 encoder_dict = {
     "cnn_gap_img": CNN_GAP_IMG,

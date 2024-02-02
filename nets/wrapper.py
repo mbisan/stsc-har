@@ -38,22 +38,22 @@ class WrapperModel(LightningModule):
             self.dsrc = "frame"
         elif mode == "ts":
             ref_size, channels = 1, n_dims
-            self.dsrc = "ts"
+            self.dsrc = "series"
         elif mode == "fft":
             ref_size, channels = 1, n_dims*2
             self.dsrc = "transformed"
         elif mode == "dtw":
             ref_size, channels = l_patterns, enc_feats
             self.wdw_len = wdw_len-l_patterns
-            self.dsrc = "ts"
+            self.dsrc = "series"
         elif mode == "dtw_c":
             ref_size, channels = l_patterns, enc_feats*n_dims
             self.wdw_len = wdw_len-l_patterns
-            self.dsrc = "ts"
+            self.dsrc = "series"
         elif mode == "dtwfeats":
             ref_size, channels = 1, enc_feats
             self.wdw_len = 1
-            self.dsrc = "ts"
+            self.dsrc = "series"
         elif mode in ["mtf", "gasf", "gadf", "cwt_test"]:
             ref_size, channels = wdw_len, n_dims
             self.dsrc = "transformed"
@@ -213,12 +213,7 @@ class WrapperModel(LightningModule):
         self.log_metrics("test")
 
     def predict_step(self, batch: dict[str: torch.Tensor], batch_idx: int):
-        """ Predict step. """
-        if self.dsrc == "img":
-            output = self(batch["frame"])
-        elif self.dsrc == "ts":
-            output = self(batch["series"])
-        return output
+        return self(batch[self.dsrc])
 
     def configure_optimizers(self):
         """ Configure the optimizers. """

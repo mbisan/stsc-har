@@ -1,8 +1,8 @@
 import torch
 
-from utils.dtw.dtw import torch_dtw
-from utils.dtw.dtw_per_channel import torch_dtw_per_channel
-from utils.dtw.dtw_pycuda import torch_dtw_cuda
+from transforms.dtw.dtw import torch_dtw
+from transforms.dtw.dtw_per_channel import torch_dtw_per_channel
+from transforms.dtw.dtw_pycuda import torch_dtw_cuda
 
 class DTWLayer(torch.nn.Module):
     def __init__(self, n_patts, d_patts, l_patts, l_out: int = None, rho: float = 1) -> None:

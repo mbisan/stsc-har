@@ -13,7 +13,7 @@ def create_model_from_DM(dm, mode: str, enc_arch: str, dec_arch: str, name: str 
 
     return WrapperModel(
         mode=mode, encoder_arch=enc_arch, decoder_arch=dec_arch,
-        n_dims=dm.n_dims, n_classes=dm.n_classes, n_patterns=dm.n_patterns, l_patterns=dm.n_patterns,
+        n_dims=dm.n_dims, n_classes=dm.n_classes, n_patterns=dm.n_patterns, l_patterns=dm.l_patterns,
         wdw_len=dm.wdw_len, wdw_str=dm.wdw_str,
         enc_feats=enc_feats, dec_feats=dec_feats, dec_layers=dec_layers, lr=lr, voting=voting, 
         weight_decayL1=weight_decayL1, weight_decayL2=weight_decayL2, name=name

@@ -9,6 +9,9 @@ from utils.arguments import get_model_name
 from pytorch_lightning import seed_everything
 import numpy as np
 
+import warnings # shut up warnings
+warnings.simplefilter("ignore", category=UserWarning)
+
 def main(args):
     dm = load_dm(args)
 

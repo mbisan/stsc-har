@@ -6,5 +6,6 @@ datasets
 cache*
 lightning_logs
 training/*
+training_*
 
 test.ipynb
