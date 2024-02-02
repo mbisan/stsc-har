@@ -41,7 +41,7 @@ def compute_medoids(
     # Return the medoids and their indices
     return meds, meds_idx
 
-def sts_medoids(dataset: STSDataset, n = 100, pattern_size = -1, meds_per_class = 1, random_seed: int = 45):
+def sts_medoids(dataset: STSDataset, n = 100, pattern_size = -1, meds_per_class = 1, random_seed: int = 42):
     np.random.seed(random_seed)
 
     window_id, window_lb = dataset.getSameClassWindowIndex()
@@ -67,7 +67,7 @@ def sts_medoids(dataset: STSDataset, n = 100, pattern_size = -1, meds_per_class 
     return meds.reshape((meds.shape[0]*meds.shape[1], meds.shape[2], meds.shape[3]))
 
 
-def sts_barycenter(dataset: STSDataset, n: int = 100, random_seed: int = 45):
+def sts_barycenter(dataset: STSDataset, n: int = 100, random_seed: int = 42):
     np.random.seed(random_seed)
     
     window_id, window_lb = dataset.getSameClassWindowIndex()

@@ -145,7 +145,7 @@ class LDFDataset(LightningDataModule):
             dfds: DFDataset,    
             data_split: dict, 
             batch_size: int, 
-            random_seed: int = 45, 
+            random_seed: int = 42, 
             num_workers: int = mp.cpu_count()//2,
             reduce_train_imbalance: bool = False,
             label_mode: int = 1,
