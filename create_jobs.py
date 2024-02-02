@@ -19,10 +19,10 @@ def create_jobs(args):
 #SBATCH --output=O-%x.%j.out
 #SBATCH --error=E-%x.%j.err
 
-cd $HOME/s3ts
+cd $HOME/stsc-har
 
 source $HOME/.bashrc
-source activate dev
+source activate dev2
 
 python training.py {get_command(args)}
 '''

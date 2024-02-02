@@ -274,16 +274,16 @@ if __name__ == "__main__":
     if not os.path.exists("./datasets"):
         os.mkdir("./datasets")
 
-    # download("UCI-HAR", "./datasets")
-    # download("HARTH", "./datasets")
-    # download("WISDM", "./datasets")
+    download("UCI-HAR", "./datasets")
+    download("HARTH", "./datasets")
+    download("WISDM", "./datasets")
 
-    # unpack("UCI-HAR", "./datasets")
-    # unpack("HARTH", "./datasets")
-    # unpack("WISDM", "./datasets")
+    unpack("UCI-HAR", "./datasets")
+    unpack("HARTH", "./datasets")
+    unpack("WISDM", "./datasets")
 
-    # prepare_uci_har("./datasets/UCI-HAR")
+    prepare_uci_har("./datasets/UCI-HAR")
     prepare_harth("./datasets/HARTH")
-    # prepare_wisdm("./datasets/WISDM")
+    prepare_wisdm("./datasets/WISDM")
 
     pass
