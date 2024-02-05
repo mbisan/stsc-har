@@ -139,7 +139,9 @@ def get_predominant_frequency(fft_mag, mode="per_class"):
         return frequencies_ordered
     
 def process_fft_frequencies(STS, SCS, frequency_values):
-    class_changes = [0] + list(np.nonzero(np.diff(SCS))[0])
+    class_changes = list(np.nonzero(np.diff(SCS))[0])
+    if class_changes[0] != 0:
+        class_changes = [0] + class_changes
 
     magnitudes = {} # a dict for each class
     classes = np.unique(SCS)
