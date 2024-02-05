@@ -12,6 +12,17 @@ from argparse import ArgumentParser
     along with the corresponding "val" metrics inside FILENAME.
 '''
 
+def log_csv(entries, loaded):
+    loaded_sorted_names = list(loaded.keys())
+    loaded_sorted_names.sort()
+
+    print(loaded_sorted_names.join(","))
+
+    for model_name in loaded_sorted_names:
+        print(model_name, end=",")
+
+        print(list(loaded[model_name].values()).join(","))
+
 def main(args):
     dir_list = os.listdir(args.dir)
 
@@ -30,6 +41,10 @@ def main(args):
     entries = list(set(entries))
     entries = list(filter(lambda x: (("val" in x) or ("test" in x)) and (not "sub" in x), entries))
     entries.sort()
+
+    if args.csv:
+        log_csv(entries, loaded)
+        return 0
 
     MODEL_NAME_LINE = 85
     print(f"{'MODELNAME':>100}", end=" |")
@@ -66,7 +81,9 @@ if __name__ == "__main__":
         help="Directory where model checkpoints and train outputs are")
     parser.add_argument("--out_name", type=str, default="results.dict",
         help="Name of the output file to look for")
-    
+    parser.add_argument("--csv", action="store_true", 
+        help="Print in csv format")
+
     args = parser.parse_args()
 
     main(args)
