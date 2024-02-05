@@ -16,12 +16,16 @@ def log_csv(entries, loaded):
     loaded_sorted_names = list(loaded.keys())
     loaded_sorted_names.sort()
 
-    print(",".join(loaded_sorted_names))
+    print("MODELNAME, ", *entries)
 
     for model_name in loaded_sorted_names:
         print(model_name, end=",")
+        
+        temp = ""
+        for entry in entries:
+            temp += f"{loaded[model_name][entry]}, "
 
-        print(",".join(list(loaded[model_name].values())))
+        print(temp[:-2])
 
 def main(args):
     dir_list = os.listdir(args.dir)
