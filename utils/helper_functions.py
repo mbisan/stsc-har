@@ -138,6 +138,22 @@ def load_dmdataset(
         if pattern_type == "med":
             print("Computing medoids...")
             meds = sts_medoids(ds, pattern_size=pattern_size, meds_per_class=num_medoids, n=compute_n)
+        if pattern_type == "med_mean":
+            print("Computing medoids...")
+            meds = sts_medoids(ds, pattern_size=pattern_size, meds_per_class=num_medoids, n=compute_n)
+            meds = np.mean(meds, axis=0, keepdims=True)
+        elif pattern_type == "noise":
+            print("Using gaussian noise...")
+            meds = np.random.randn(np.unique(ds.SCS).shape[0], ds.STS.shape[0], pattern_size)
+            print(meds.shape)
+        elif pattern_type == "noise_1":
+            print("Using gaussian noise...")
+            meds = np.random.randn(1, ds.STS.shape[0], pattern_size)
+            print(meds.shape)
+        elif pattern_type == "noise_c":
+            print("Using gaussian noise...")
+            meds = np.random.randn(3, pattern_size)
+            print(meds.shape)
         elif pattern_type == "syn":
             print("Using synthetic shapes...")
             meds = np.empty((3, pattern_size))
