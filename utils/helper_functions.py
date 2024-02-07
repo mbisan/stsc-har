@@ -154,6 +154,10 @@ def load_dmdataset(
             print("Using gaussian noise...")
             meds = np.random.randn(3, pattern_size)
             print(meds.shape)
+        elif pattern_type == "noise_c_1":
+            print("Using gaussian noise...")
+            meds = np.random.randn(1, pattern_size)
+            print(meds.shape)
         elif pattern_type == "syn":
             print("Using synthetic shapes...")
             meds = np.empty((3, pattern_size))
