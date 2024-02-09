@@ -31,6 +31,9 @@ class StreamingTimeSeriesCopy(Dataset):
 
         ts, c = self.stsds[self.indices[index]]
 
+        if self.mode == "segmentation":
+            return {"series": ts, "scs": c}
+
         if self.label_mode > 1:
             c = torch.mode(c[-self.label_mode:]).values
         else:

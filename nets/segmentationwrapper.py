@@ -11,18 +11,12 @@ import torch.nn as nn
 import numpy as np
 import torch
 
-from nets import encoder_dict, decoder_dict
-from transforms.dtw import dtw_mode
+from nets.segmentation.deeplabv3p1d import get_model
 from nets.metrics import metrics_from_cm
 
-class WrapperModel(LightningModule):
+class SegmentationModel(LightningModule):
 
-    def __init__(self, mode, encoder_arch, decoder_arch,
-        n_dims, n_classes, n_patterns, l_patterns,
-        wdw_len, wdw_str,
-        enc_feats, dec_feats, dec_layers, lr, voting, 
-        weight_decayL1, weight_decayL2,
-        name=None) -> None:
+    def __init__(self, in_channels, latent_features, n_classes, aspp_dilate, lr, weight_decayL1, weight_decayL2, name=None) -> None:
 
         """ Wrapper for the PyTorch models used in the experiments. """
 
@@ -33,117 +27,41 @@ class WrapperModel(LightningModule):
         super().__init__(), self.__dict__.update(locals())
         self.save_hyperparameters()
 
-        # create encoder
-        if mode == "img":
-            ref_size, channels = l_patterns, n_patterns
-            self.dsrc = "frame"
-        elif mode == "ts":
-            ref_size, channels = 1, n_dims
-            self.dsrc = "series"
-        elif mode == "fft":
-            ref_size, channels = 1, n_dims*2
-            self.dsrc = "transformed"
-        elif mode == "dtw":
-            ref_size, channels = l_patterns, enc_feats
-            self.wdw_len = wdw_len-l_patterns
-            self.dsrc = "series"
-        elif mode == "dtw_c":
-            ref_size, channels = l_patterns, enc_feats*n_dims
-            self.wdw_len = wdw_len-l_patterns
-            self.dsrc = "series"
-        elif mode == "dtwfeats":
-            ref_size, channels = 1, enc_feats
-            self.wdw_len = 1
-            self.dsrc = "series"
-        elif mode == "dtwfeats_c":
-            ref_size, channels = n_dims, enc_feats
-            self.wdw_len = 1
-            self.dsrc = "series"
-        elif mode in ["mtf", "gasf", "gadf", "cwt_test"]:
-            ref_size, channels = wdw_len, n_dims
-            self.dsrc = "transformed"
-
-        self.initial_transform = None
-        if mode in ["dtw", "dtw_c"]:
-            self.initial_transform = dtw_mode[mode](n_patts=enc_feats, d_patts=n_dims, l_patts=l_patterns, l_out=wdw_len-l_patterns, rho=self.voting["rho"]/10)
-        elif mode == "dtwfeats" or mode == "dtwfeats_c":
-            self.initial_transform = dtw_mode[mode](n_patts=enc_feats, d_patts=n_dims, l_patts=l_patterns, l_out=wdw_len-l_patterns, rho=self.voting["rho"])
-
-        self.encoder = encoder_dict[encoder_arch](channels=channels, ref_size=ref_size, 
-            wdw_size=self.wdw_len, n_feature_maps=enc_feats)
-        
-        # create decoder
-        shape: torch.Tensor = self.encoder.get_output_shape()
-
-        inp_feats = torch.prod(torch.tensor(shape[1:]))
-        out_feats = n_classes
-        self.decoder = decoder_dict[decoder_arch](inp_feats=inp_feats, 
-            hid_feats=dec_feats, out_feats=out_feats, hid_layers=dec_layers)
-
-        # create softmax and flatten layers
-        self.flatten = nn.Flatten(start_dim=1)
+        self.segmentation = get_model(in_channels, latent_features, n_classes, aspp_dilate)
         self.softmax = nn.Softmax()
 
         for phase in ["train", "val", "test"]: 
-            self.__setattr__(f"{phase}_cm", tm.ConfusionMatrix(num_classes=out_feats, task="multiclass"))
+            self.__setattr__(f"{phase}_cm", tm.ConfusionMatrix(num_classes=n_classes, task="multiclass", ignore_index=100))
             if phase != "train":
-                self.__setattr__(f"{phase}_auroc", tm.AUROC(num_classes=out_feats, task="multiclass", average="macro"))
-
-        self.voting = None
-        if voting["n"] > 1:
-            self.voting = voting
-            self.voting["weights"] = (self.voting["rho"] ** (1/self.wdw_len)) ** torch.arange(self.voting["n"] - 1, -1, -1)
+                self.__setattr__(f"{phase}_auroc", tm.AUROC(num_classes=n_classes, task="multiclass", average="macro", ignore_index=100))
 
         self.previous_predictions = None
         self.probabilities = []
         self.labels = []
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """ Forward pass. """
-        x=self.logits(x)
-        x = self.softmax(x)
-        return x
+        x = self.logits(x)
+        return self.softmax(x)
     
     def logits(self, x: torch.Tensor) -> torch.Tensor:
-        if not self.initial_transform is None:
-            x = self.initial_transform(x)
-        x = self.encoder(x)
-        x = self.flatten(x)
-        x = self.decoder(x)
-        return x
+        return self.segmentation(x)
 
     def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
 
         """ Inner step for the training, validation and testing. """
 
         # Forward pass
-        output = self.logits(batch[self.dsrc])
+        output = self.logits(batch["series"])
 
         # Compute the loss and metrics
-        loss = F.cross_entropy(output, batch["label"])
+        loss = F.cross_entropy(output, batch["scs"], ignore_index=100)
 
-        if stage == "train" or self.voting is None:
-            predictions = torch.argmax(output, dim=1)
-        if stage != "train" and not self.voting is None:
-            pred_prob = torch.softmax(output, dim=1)
+        predictions = torch.argmax(output, dim=1)
 
-            if self.previous_predictions is None:
-                pred_ = torch.cat((torch.zeros((self.voting["n"]-1, self.n_classes)), pred_prob), dim=0)
-            else:
-                pred_ = torch.cat((self.previous_predictions, pred_prob), dim=0)
-            
-            self.previous_predictions = pred_prob[-(self.voting["n"]-1):,:]
-
-            predictions_weighted = torch.conv2d(pred_[None, None, ...], self.voting["weights"][None, None, :, None])[0, 0]
-            predictions = predictions_weighted.argmax(dim=1)
-
-            self.probabilities.append(pred_prob)
-            self.labels.append(batch["label"])
-
-        self.__getattr__(f"{stage}_cm").update(predictions, batch["label"])
-        if stage != "train" and self.voting is None:
+        self.__getattr__(f"{stage}_cm").update(predictions, batch["scs"])
+        if stage != "train":
             self.probabilities.append(torch.softmax(output, dim=1))
-            self.labels.append(batch["label"])
+            self.labels.append(batch["scs"])
 
         # log loss and metrics
         self.log(f"{stage}_loss", loss, on_epoch=True, on_step=True, prog_bar=True, logger=True)
