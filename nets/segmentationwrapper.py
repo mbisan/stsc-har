@@ -28,7 +28,10 @@ class SegmentationModel(LightningModule):
         super().__init__(), self.__dict__.update(locals())
         self.save_hyperparameters()
 
-        self.segmentation = UNET(in_channels, n_classes, latent_features) # get_model(in_channels, latent_features, n_classes, aspp_dilate)
+        if "unet" in name:
+            self.segmentation = UNET(in_channels, n_classes, latent_features) # get_model(in_channels, latent_features, n_classes, aspp_dilate)
+        else:
+            self.segmentation = get_model(in_channels, latent_features, n_classes, aspp_dilate)
         self.softmax = nn.Softmax()
 
         for phase in ["train", "val", "test"]: 

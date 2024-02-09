@@ -29,7 +29,8 @@ class UNET(nn.Module):
         self.cnn_2 = nn.Sequential(OrderedDict([
             ("conv", nn.Conv1d(in_channels=latent_features, out_channels=latent_features*2, kernel_size=3, padding='same')),
             ("bn", nn.BatchNorm1d(num_features=latent_features*2)),
-            ("activation", nn.ReLU())
+            ("activation", nn.ReLU()),
+            ("pool", nn.MaxPool1d(kernel_size=2))
             ]))
         
         self.last = nn.Sequential(OrderedDict([
@@ -50,6 +51,11 @@ class UNET(nn.Module):
             ("activation", nn.ReLU()), 
             ]))
         
+        self.tcnn_2 = nn.Sequential(OrderedDict([
+            ("conv", nn.Conv1d(in_channels=latent_features, out_channels=latent_features, kernel_size=5, padding="same")),
+            ("activation", nn.ReLU())
+            ]))   
+
         self.out = nn.Sequential(OrderedDict([
             ("conv", nn.Conv1d(in_channels=latent_features, out_channels=num_classes, kernel_size=1, padding="same")),
             ("activation", nn.ReLU())
@@ -61,8 +67,10 @@ class UNET(nn.Module):
         x = self.cnn_2(x)
         x = self.last(x)
 
+        x = F.interpolate(x, size=(x.shape[-1]*2, ), mode='linear', align_corners=False)
         x = self.tcnn_0(x)
         x = F.interpolate(x, size=(x.shape[-1]*2, ), mode='linear', align_corners=False)
         x = self.tcnn_1(x)
         x = F.interpolate(x, size=(x.shape[-1]*2, ), mode='linear', align_corners=False)
+        x = self.tcnn_2(x)
         return self.out(x)

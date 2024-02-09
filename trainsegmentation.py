@@ -29,7 +29,7 @@ def main(args):
         reduce_train_imbalance=args.reduce_imbalance, overlap=args.overlap, n_val_subjects=args.n_val_subjects)
     print(f"Using {len(dm.ds_train)} observations for training, {len(dm.ds_val)} for validation and {len(dm.ds_test)} observations for test")
 
-    modelname = get_model_name(args)
+    modelname = get_model_name(args) + args.arch
     print("\n" + modelname)
     modeldir = modelname.replace("|", "_").replace(",", "_")
 
@@ -89,6 +89,8 @@ def get_parser():
         help="Number of latent features")
     parser.add_argument("--aspp_dilate", default=[2, 4], nargs="+", type=int,
         help="ASPP dilate rates")
+    parser.add_argument("--arch", type=str,
+        help="Architecture of segmentation model")
 
     return parser
 
