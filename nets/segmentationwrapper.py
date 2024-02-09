@@ -12,11 +12,12 @@ import numpy as np
 import torch
 
 from nets.segmentation.deeplabv3p1d import get_model
+from nets.segmentation.unet import UNET
 from nets.metrics import metrics_from_cm
 
 class SegmentationModel(LightningModule):
 
-    def __init__(self, in_channels, latent_features, n_classes, aspp_dilate, lr, weight_decayL1, weight_decayL2, name=None) -> None:
+    def __init__(self, in_channels, latent_features, n_classes, aspp_dilate, lr, weight_decayL1, weight_decayL2, name=None, overlap=1) -> None:
 
         """ Wrapper for the PyTorch models used in the experiments. """
 
@@ -27,7 +28,7 @@ class SegmentationModel(LightningModule):
         super().__init__(), self.__dict__.update(locals())
         self.save_hyperparameters()
 
-        self.segmentation = get_model(in_channels, latent_features, n_classes, aspp_dilate)
+        self.segmentation = UNET(in_channels, n_classes, latent_features) # get_model(in_channels, latent_features, n_classes, aspp_dilate)
         self.softmax = nn.Softmax()
 
         for phase in ["train", "val", "test"]: 
@@ -53,15 +54,17 @@ class SegmentationModel(LightningModule):
         # Forward pass
         output = self.logits(batch["series"])
 
+        skip = output.shape[-1] - self.overlap
+
         # Compute the loss and metrics
         loss = F.cross_entropy(output, batch["scs"], ignore_index=100)
 
-        predictions = torch.argmax(output, dim=1)
+        predictions = torch.argmax(output, dim=1)[:, -skip:]
 
-        self.__getattr__(f"{stage}_cm").update(predictions, batch["scs"])
+        self.__getattr__(f"{stage}_cm").update(predictions, batch["scs"][:, -skip:])
         if stage != "train":
-            self.probabilities.append(torch.softmax(output, dim=1))
-            self.labels.append(batch["scs"])
+            self.probabilities.append(torch.softmax(output, dim=1)[:, :, -skip:])
+            self.labels.append(batch["scs"][:, -skip:])
 
         # log loss and metrics
         self.log(f"{stage}_loss", loss, on_epoch=True, on_step=True, prog_bar=True, logger=True)

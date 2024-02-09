@@ -2,7 +2,7 @@ import os
 from time import time
 
 from utils.helper_functions import load_dataset, str_time
-from data.stsdataset import LSTSDataset
+from data.segmentation_dataset import LSegDataset
 from data.base import split_by_test_subject
 
 from nets.segmentationwrapper import SegmentationModel
@@ -26,13 +26,14 @@ warnings.simplefilter("ignore", category=UserWarning)
 def main(args):
     dm = load_tsdataset(dataset_name=args.dataset, dataset_home_directory=args.dataset_dir, batch_size=args.batch_size, num_workers=args.num_workers,
         window_size=args.window_size, window_stride=args.window_stride, normalize=args.normalize, subjects_for_test=args.subjects_for_test,
-        reduce_train_imbalance=args.reduce_imbalance, overlap=args.overlap, mode="segmentation", n_val_subjects=args.n_val_subjects)
+        reduce_train_imbalance=args.reduce_imbalance, overlap=args.overlap, n_val_subjects=args.n_val_subjects)
+    print(f"Using {len(dm.ds_train)} observations for training, {len(dm.ds_val)} for validation and {len(dm.ds_test)} observations for test")
 
     modelname = get_model_name(args)
     print("\n" + modelname)
     modeldir = modelname.replace("|", "_").replace(",", "_")
 
-    model = SegmentationModel(dm.n_dims, args.latent_features, dm.n_classes, args.aspp_dilate, args.lr, args.weight_decayL1, args.weight_decayL2, modelname)
+    model = SegmentationModel(dm.n_dims, args.latent_features, dm.n_classes, args.aspp_dilate, args.lr, args.weight_decayL1, args.weight_decayL2, modelname, args.overlap)
 
     # save computed patterns for later use
     if not os.path.exists(os.path.join(args.training_dir)):
@@ -110,7 +111,6 @@ def load_tsdataset(
         subjects_for_test = None,
         reduce_train_imbalance = False,
         overlap = -1,
-        mode = None,
         n_val_subjects = 1):
     
     ds = load_dataset(dataset_name, dataset_home_directory, window_size, window_stride, normalize)
@@ -119,8 +119,8 @@ def load_tsdataset(
 
     data_split = split_by_test_subject(ds, subjects_for_test, n_val_subjects)
 
-    dm = LSTSDataset(ds, data_split=data_split, batch_size=batch_size, random_seed=42, 
-        num_workers=num_workers, reduce_train_imbalance=reduce_train_imbalance, label_mode=1, mode=mode)
+    dm = LSegDataset(ds, data_split=data_split, batch_size=batch_size, random_seed=42, 
+        num_workers=num_workers, reduce_train_imbalance=reduce_train_imbalance, skip=(window_size - overlap))
     dm.l_patterns = 1
 
     return dm
