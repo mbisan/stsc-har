@@ -9,19 +9,23 @@ from data.base import STSDataset
 class StreamingTimeSeriesCopy(Dataset):
 
     def __init__(self,
-            stsds: STSDataset, indices: np.ndarray
+            stsds: STSDataset, indices: np.ndarray, delay: int = 0
             ) -> None:
         super().__init__()
 
         self.stsds = stsds
         self.indices = indices
+        self.delay = delay
         
     def __len__(self):
         return self.indices.shape[0]
     
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor, int]:
-
-        ts, c = self.stsds[self.indices[index]]
+        if self.delay:
+            id = min(self.indices[index] + np.random.randint(low=-self.delay, high=self.delay), len(self.stsds))
+            ts, c = self.stsds[id]
+        else:
+            ts, c = self.stsds[self.indices[index]]
         return {"series": ts, "scs": c}
     
     def __del__(self):
@@ -71,21 +75,10 @@ class LSegDataset(LightningDataModule):
         test_indices = np.arange(total_observations)[data_split["test"](self.stsds.indices)][::skip]
         val_indices = np.arange(total_observations)[data_split["val"](self.stsds.indices)][::skip]
 
-        self.reduce_train_imbalance = reduce_train_imbalance
-        if reduce_train_imbalance:
-            self.train_labels = self.stsds.SCS[self.stsds.indices[train_indices]]
-            self.train_label_weights = np.empty_like(self.train_labels, dtype=np.float32)
+        self.train_labels = self.stsds.SCS[self.stsds.indices[train_indices]]
+        change_points = np.nonzero(np.diff(self.train_labels))[0]
 
-            cl, counts = torch.unique(self.train_labels, return_counts=True)
-            for i in range(cl.shape[0]):
-                self.train_label_weights[self.train_labels == cl[i]] = self.train_labels.shape[0] / counts[i]
-
-            examples_per_epoch = int(counts.float().mean().ceil().item())
-            print(f"Sampling {examples_per_epoch} (balanced) observations per epoch.")
-            self.train_sampler = WeightedRandomSampler(self.train_label_weights, int(counts.float().mean().ceil().item()), replacement=True)
-            # train_indices = reduce_imbalance(train_indices, self.train_labels, seed=random_seed)
-
-        self.ds_train = StreamingTimeSeriesCopy(self.stsds, train_indices)
+        self.ds_train = StreamingTimeSeriesCopy(self.stsds, change_points + int(self.wdw_len/2), delay=int(self.wdw_len/2))
         self.ds_test = StreamingTimeSeriesCopy(self.stsds, test_indices)
         self.ds_val = StreamingTimeSeriesCopy(self.stsds, val_indices)
         
