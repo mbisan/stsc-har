@@ -38,6 +38,13 @@ class STSDataset(Dataset):
 
         return self.STS[:, first:last:self.wstride], self.SCS[first:last:self.wstride]
     
+    def position(self, index: int) -> tuple[np.ndarray, np.ndarray]:
+
+        first = index-self.wsize*self.wstride+self.wstride
+        last = index+1
+
+        return self.STS[:, first:last:self.wstride], self.SCS[first:last:self.wstride]
+
     def sliceFromArrayOfIndices(self, indexes: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         assert len(indexes.shape) == 1 # only accept 1-dimensional arrays
 
@@ -52,15 +59,20 @@ class STSDataset(Dataset):
         return return_sts, return_scs
     
     def getSameClassWindowIndex(self):
+        diff = np.diff(self.SCS)
+        ids = np.concatenate(([0], np.nonzero(diff)[0], [self.SCS.shape[0]]))
 
-        id = []
-        cl = []
-        for i, ix in enumerate(self.indices):
-            if np.unique(self.SCS[(ix-self.wsize*self.wstride):ix]).shape[0] == 1:
-                id.append(i)
-                cl.append(self.SCS[ix])
+        temp_indices = np.zeros_like(self.SCS, dtype=np.bool_)
+
+        offset = self.wsize*self.wstride + self.wstride
+        for i in range(ids.shape[0]-1):
+            if ids[i+1] - ids[i] >= offset:
+                temp_indices[(ids[i] + offset):(ids[i+1]+1)] = True
+
+        indices_new = temp_indices[self.indices]
+        sameClassWindowIndex = np.arange(self.indices.shape[0])[indices_new]
         
-        return np.array(id), np.array(cl)
+        return sameClassWindowIndex, self.SCS[self.indices[sameClassWindowIndex]]
     
     def normalizeSTS(self, mode):
         self.mean = np.expand_dims(self.STS.mean(1), 1)
