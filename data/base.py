@@ -58,7 +58,7 @@ class STSDataset(Dataset):
 
         return return_sts, return_scs
     
-    def getSameClassWindowIndex(self):
+    def getSameClassWindowIndex(self, return_mask=False):
         diff = np.diff(self.SCS)
         ids = np.concatenate(([0], np.nonzero(diff)[0], [self.SCS.shape[0]]))
 
@@ -70,10 +70,26 @@ class STSDataset(Dataset):
                 temp_indices[(ids[i] + offset):(ids[i+1]+1)] = True
 
         indices_new = temp_indices[self.indices]
+
+        if return_mask:
+            return indices_new
+
         sameClassWindowIndex = np.arange(self.indices.shape[0])[indices_new]
         
         return sameClassWindowIndex, self.SCS[self.indices[sameClassWindowIndex]]
     
+    def getChangePointIndex(self):
+        diff = np.diff(self.SCS)
+        ids = np.nonzero(diff)[0]
+
+        temp_indices = np.zeros_like(self.SCS, dtype=np.bool_)
+        temp_indices[ids] = True
+
+        indices_new = temp_indices[self.indices]
+        changePointIndex = np.arange(self.indices.shape[0])[indices_new]
+
+        return changePointIndex
+
     def normalizeSTS(self, mode):
         self.mean = np.expand_dims(self.STS.mean(1), 1)
         self.std = np.expand_dims(np.std(self.STS, axis=1), 1)
