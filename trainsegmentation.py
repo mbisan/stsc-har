@@ -7,7 +7,7 @@ from data.base import split_by_test_subject
 
 from nets.segmentationwrapper import SegmentationModel
 
-from utils.arguments import get_model_name
+from utils.argumentsegmentation import get_model_name
 
 from pytorch_lightning import seed_everything
 import numpy as np
@@ -29,11 +29,11 @@ def main(args):
         reduce_train_imbalance=args.reduce_imbalance, overlap=args.overlap, n_val_subjects=args.n_val_subjects)
     print(f"Using {len(dm.ds_train)} observations for training, {len(dm.ds_val)} for validation and {len(dm.ds_test)} observations for test")
 
-    modelname = get_model_name(args) + args.arch
+    modelname = get_model_name(args)
     print("\n" + modelname)
     modeldir = modelname.replace("|", "_").replace(",", "_")
 
-    model = SegmentationModel(dm.n_dims, args.latent_features, dm.n_classes, args.aspp_dilate, args.lr, args.weight_decayL1, args.weight_decayL2, modelname, args.overlap)
+    model = SegmentationModel(dm.n_dims, args.latent_features, dm.n_classes, args.pooling, args.lr, args.weight_decayL1, args.weight_decayL2, modelname, args.overlap)
 
     # save computed patterns for later use
     if not os.path.exists(os.path.join(args.training_dir)):
@@ -87,20 +87,12 @@ def get_parser():
         help="Parameter controlling L2 regularizer")
     parser.add_argument("--latent_features", default=10, type=int,
         help="Number of latent features")
-    parser.add_argument("--aspp_dilate", default=[2, 4], nargs="+", type=int,
+    parser.add_argument("--pooling", default=[2, 4], nargs="+", type=int,
         help="ASPP dilate rates")
     parser.add_argument("--arch", type=str,
         help="Architecture of segmentation model")
 
     return parser
-
-def get_model_name(args):
-    modelname = f"seg|{args.dataset}," + '-'.join([str(subject) for subject in args.subjects_for_test]) + f"|{args.n_val_subjects}|" \
-                f"{args.window_size},{args.window_stride}|bs{args.batch_size}_lr{args.lr}_l1{args.weight_decayL1}_l2{args.weight_decayL2}|" + \
-                f"{ '-'.join([str(rate) for rate in args.aspp_dilate])}_{args.latent_features}|" + \
-                (f"ov{args.overlap}|" if args.overlap > 0 else "")
-
-    return modelname[:-1]
 
 def load_tsdataset(
         dataset_name,
