@@ -76,22 +76,20 @@ class LSegDataset(LightningDataModule):
         val_indices = np.arange(total_observations)[data_split["val"](self.stsds.indices)][::skip]
 
         self.train_labels = self.stsds.SCS[self.stsds.indices[train_indices]]
-        change_points = np.nonzero(np.diff(self.train_labels))[0]
 
-        self.ds_train = StreamingTimeSeriesCopy(self.stsds, change_points + int(self.wdw_len/2), delay=int(self.wdw_len/2))
+        label_diff = np.diff(self.train_labels)
+        label_diff[np.random.randn(label_diff.shape[0]) > 2.5] = 1
+        train_points = np.nonzero(label_diff)[0]
+
+        self.ds_train = StreamingTimeSeriesCopy(self.stsds, train_points + int(self.wdw_len/2), delay=self.wdw_len)
         self.ds_test = StreamingTimeSeriesCopy(self.stsds, test_indices)
         self.ds_val = StreamingTimeSeriesCopy(self.stsds, val_indices)
         
     def train_dataloader(self) -> DataLoader:
         """ Returns the training DataLoader. """
-        if self.reduce_train_imbalance:
-            return DataLoader(self.ds_train, batch_size=self.batch_size, 
-                num_workers=self.num_workers, sampler=self.train_sampler,
-                pin_memory=True, persistent_workers=True)
-        else:
-            return DataLoader(self.ds_train, batch_size=self.batch_size, 
-                num_workers=self.num_workers, shuffle=True ,
-                pin_memory=True, persistent_workers=True)
+        return DataLoader(self.ds_train, batch_size=self.batch_size, 
+            num_workers=self.num_workers, shuffle=True ,
+            pin_memory=True, persistent_workers=True)
 
     def val_dataloader(self) -> DataLoader:
         """ Returns the validation DataLoader. """

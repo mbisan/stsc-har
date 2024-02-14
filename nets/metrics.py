@@ -14,3 +14,12 @@ def metrics_from_cm(cm):
     iou = TP/(TP+FP+FN) # iou per class
 
     return {"precision": precision, "recall": recall, "f1": f1, "iou": iou}
+
+def print_cm(cm, num_classes):
+    print("       ", "".join([f"Pred {i:>2} " for i in range(num_classes)]))
+    print("-------------------------------------------------------------------------------------------------------")
+    for i in range(num_classes):
+        print(f"True {i:>2}|", end="")
+        for j in range(num_classes):
+            print(f"{cm[i, j]:>7} ", end="")
+        print()

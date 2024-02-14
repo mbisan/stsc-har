@@ -11,9 +11,8 @@ import torch.nn as nn
 import numpy as np
 import torch
 
-from nets.segmentation.deeplabv3p1d import get_model
-from nets.segmentation.unet import UNET
-from nets.metrics import metrics_from_cm
+from nets.segmentation import segmentation_dict
+from nets.metrics import metrics_from_cm, print_cm
 
 class SegmentationModel(LightningModule):
 
@@ -29,9 +28,12 @@ class SegmentationModel(LightningModule):
         self.save_hyperparameters()
 
         if "unet" in name:
-            self.segmentation = UNET(in_channels, n_classes, latent_features) # get_model(in_channels, latent_features, n_classes, aspp_dilate)
-        else:
-            self.segmentation = get_model(in_channels, latent_features, n_classes, aspp_dilate)
+            self.segmentation = segmentation_dict["unet"](in_channels, n_classes, latent_features) # get_model(in_channels, latent_features, n_classes, aspp_dilate)
+        elif "utime" in name:
+            self.segmentation = segmentation_dict["utime"](n_classes=n_classes, in_dims=in_channels, depth = 3, 
+                dilation = 1, kernel_size = 3, padding = "same", init_filters = latent_features, complexity_factor = 1.5, pools = (2, 2, 2), segment_size = 2, change_size = 3)
+        elif "dlv3" in name:
+            self.segmentation = segmentation_dict["dlv3"](in_channels, latent_features, n_classes, aspp_dilate)
         self.softmax = nn.Softmax()
 
         for phase in ["train", "val", "test"]: 
@@ -70,7 +72,7 @@ class SegmentationModel(LightningModule):
             self.labels.append(batch["scs"][:, -skip:])
 
         # log loss and metrics
-        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=True, prog_bar=True, logger=True)
+        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
 
         # return loss
         if stage == "train":
@@ -110,6 +112,9 @@ class SegmentationModel(LightningModule):
         self.log(f"{stage}_re", metrics["recall"].nanmean(), on_epoch=True, on_step=False, prog_bar=True, logger=True)
         self.log(f"{stage}_f1", metrics["f1"].nanmean(), on_epoch=True, on_step=False, prog_bar=False, logger=True)
         self.log(f"{stage}_iou", metrics["iou"].nanmean(), on_epoch=True, on_step=False, prog_bar=False, logger=True)
+
+        if stage == "test":
+            print_cm(cm, self.n_classes)
 
         if stage != "train":
             auc_per_class = tm.functional.auroc(
