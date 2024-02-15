@@ -16,10 +16,11 @@ def metrics_from_cm(cm):
     return {"precision": precision, "recall": recall, "f1": f1, "iou": iou}
 
 def print_cm(cm, num_classes):
-    print("       ", "".join([f"Pred {i:>2} " for i in range(num_classes)]))
+    cm=cm/cm.sum(1, keepdim=True)
+    print("       ", "".join([f"Pr {i:>2} " for i in range(num_classes)]))
     print("-------------------------------------------------------------------------------------------------------")
     for i in range(num_classes):
         print(f"True {i:>2}|", end="")
         for j in range(num_classes):
-            print(f"{cm[i, j]:>7} ", end="")
+            print(f"{cm[i, j]:>5.3f} ".replace("0.", " ."), end="")
         print()

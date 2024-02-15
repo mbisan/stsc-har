@@ -117,7 +117,6 @@ class SegmentationModel(LightningModule):
 
         if stage == "test":
             self.cm_last = cm
-            print_cm(cm, self.n_classes)
 
         if stage != "train":
             auc_per_class = tm.functional.auroc(
