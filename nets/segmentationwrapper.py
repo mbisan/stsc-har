@@ -45,6 +45,8 @@ class SegmentationModel(LightningModule):
         self.probabilities = []
         self.labels = []
 
+        self.cm_last = None
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.logits(x)
         return self.softmax(x)
@@ -114,6 +116,7 @@ class SegmentationModel(LightningModule):
         self.log(f"{stage}_iou", metrics["iou"].nanmean(), on_epoch=True, on_step=False, prog_bar=False, logger=True)
 
         if stage == "test":
+            self.cm_last = cm
             print_cm(cm, self.n_classes)
 
         if stage != "train":

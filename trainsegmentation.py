@@ -15,7 +15,7 @@ import numpy as np
 from argparse import ArgumentParser
 import multiprocessing
 
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning import Trainer, seed_everything
@@ -137,12 +137,16 @@ def train_model(
         monitor=metrics['target'], 
         mode=metrics["mode"],
         save_top_k=-1,
-        filename='{epoch}-{step}-{val_re:.2f}'
+        filename='{epoch}-{step}-{val_re:.4f}'
     )
 
-    tr = Trainer(default_root_dir=pl_kwargs["default_root_dir"], 
-    accelerator=pl_kwargs["accelerator"], callbacks=[ckpt, LearningRateMonitor(logging_interval="epoch")], max_epochs=max_epochs,
-    logger=TensorBoardLogger(save_dir=pl_kwargs["default_root_dir"], name=model.name.replace("|", "_").replace(",", "_")))
+    tr = Trainer(
+        default_root_dir=pl_kwargs["default_root_dir"],
+        accelerator=pl_kwargs["accelerator"], 
+        callbacks=[ckpt, LearningRateMonitor(logging_interval="epoch"), TQDMProgressBar(refresh_rate=25)], 
+        max_epochs=max_epochs,
+        logger=TensorBoardLogger(save_dir=pl_kwargs["default_root_dir"], name=model.name.replace("|", "_").replace(",", "_"))
+    )
 
     # train the model
     tr.fit(model=model, datamodule=dm)
@@ -154,7 +158,7 @@ def train_model(
     # run the validation with the final weights
     data = tr.test(model, datamodule=dm)
 
-    return model, data[0]
+    return model, {**data[0], "cm": repr(model.cm_last.tolist()), "path": ckpt.best_model_path}
 
 if __name__ == "__main__":
     start_time = time()
