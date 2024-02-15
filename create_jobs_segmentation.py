@@ -1,21 +1,21 @@
 baseArguments = {
     "num_workers": 8,
-    "dataset": "WISDM",
+    "dataset": "HARTH",
     "subjects_for_test": [
-        [35],
-        [34],
-        [33],
-        [32],
-        [31],
-        [30],
-        [29],
-        [28],
-        [27],
-        [26],
-        [25],
-        [24],
-        [23],
-        [22],
+        #[35],
+        #[34],
+        #[33],
+        #[32],
+        #[31],
+        #[30],
+        #[29],
+        #[28],
+        #[27],
+        #[26],
+        #[25],
+        #[24],
+        #[23],
+        #[22],
         [21],
         [20],
         [19],
@@ -47,7 +47,7 @@ baseArguments = {
     "batch_size": 64,
     "overlap": 0,
     "max_epochs": 10,
-    "training_dir": "training_segment",
+    "training_dir": "training_segment_harth",
     "weight_decayL1": 0.0001,
     "weight_decayL2": 0.00001
 }
@@ -58,8 +58,8 @@ segExperiments = {
     "window_stride": 1,
 }
 
-RAM = 32
-CPUS = 16
+RAM = 16
+CPUS = 8
 
 experiments = [segExperiments] #, dtwExperiments, dtwcExperiments, tsExperiments, gasfExperiments, gadfExperiments, mtffExperiments]
 

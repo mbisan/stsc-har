@@ -16,7 +16,7 @@ def log_csv(entries, loaded):
     loaded_sorted_names = list(loaded.keys())
     loaded_sorted_names.sort()
 
-    print("MODELNAME, ", *entries)
+    print("MODELNAME", *entries, sep=", ")
 
     for model_name in loaded_sorted_names:
         print(model_name, end=",")

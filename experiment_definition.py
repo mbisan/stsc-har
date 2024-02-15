@@ -2,6 +2,20 @@ baseArguments = {
     "num_workers": 8,
     "dataset": "HARTH",
     "subjects_for_test": [
+        #[35],
+        #[34],
+        #[33],
+        #[32],
+        #[31],
+        #[30],
+        #[29],
+        #[28],
+        #[27],
+        #[26],
+        #[25],
+        #[24],
+        #[23],
+        #[22],
         [21],
         [20],
         [19],
@@ -27,8 +41,8 @@ baseArguments = {
     ],
     "lr": 0.001,
     "n_val_subjects": 4,
-    "encoder_architecture": "cnn_gap",
-    "encoder_features": 32,
+    "encoder_architecture": "cnn_gap_img",
+    "encoder_features": 24,
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
@@ -38,20 +52,20 @@ baseArguments = {
     "rho": 0.1,
     # "overlap": -1,
     "max_epochs": 20,
-    "training_dir": "training_syn",
+    "training_dir": "training_harth_gasf",
     "cached": False,
     "weight_decayL1": 0.0001,
     "weight_decayL2": 0.00001
 }
 
 imgExperiments = {
-    "window_size": 50,
+    "window_size": 25,
     "window_stride": 2,
     "mode": "img",
     "num_medoids": 1,
     "compute_n": 300,
-    "pattern_type": "syn",
-    "pattern_size": 50
+    "pattern_type": "syn_2",
+    "pattern_size": 25
 }
 
 dtwExperiments = {
@@ -75,25 +89,25 @@ tsExperiments = {
 }
 
 gasfExperiments = {
-    "window_size": 48,
+    "window_size": 50,
     "window_stride": 1,
     "mode": "gasf"
 }
 
 gadfExperiments = {
-    "window_size": 48,
+    "window_size": 40,
     "window_stride": 1,
     "mode": "gadf"
 }
 
 mtffExperiments = {
-    "window_size": 48,
+    "window_size": 40,
     "window_stride": 1,
     "mode": "mtf",
-    "mtf_bins": 10
+    "mtf_bins": 16
 }
 
-RAM = 32
+RAM = 16
 CPUS = 16
 
-experiments = [imgExperiments] #, dtwExperiments, dtwcExperiments, tsExperiments, gasfExperiments, gadfExperiments, mtffExperiments]
+experiments = [gasfExperiments] #, dtwExperiments, dtwcExperiments, tsExperiments, gasfExperiments, gadfExperiments, mtffExperiments]
