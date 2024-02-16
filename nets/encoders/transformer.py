@@ -81,6 +81,8 @@ class Transformer(nn.Module):
     def __init__(self, channels, ref_size, 
             wdw_size, n_feature_maps):
         
+        super().__init__()
+
         self.channels = channels
         self.ref_size = ref_size
         self.wdw_size = wdw_size
