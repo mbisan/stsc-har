@@ -1,6 +1,10 @@
 import os
 from argparse import ArgumentParser
 
+import numpy as np
+import torch
+from nets.metrics import print_cm, metrics_from_cm
+
 '''
     Usage:
         python log_results.py --dir DIRECTORY --out_name FILENAME
@@ -43,6 +47,20 @@ def main(args):
         for entry, data in entry_dict.items():
             entries.append(entry)
     entries = list(set(entries))
+
+    if "cm" in entries:
+        print("Compute aggregated Confusion Matrix")
+
+        cm_summed = np.zeros_like(np.array(eval(loaded[list(loaded.keys())[0]]["cm"])))
+
+        for model_name in loaded.keys():
+            cm_summed += np.array(eval(loaded[model_name]["cm"]))
+
+        cm_summed = torch.from_numpy(cm_summed)
+        print_cm(cm_summed, cm_summed.shape[0])
+        for key, value in metrics_from_cm(cm_summed).items():
+            print(key, value, "->", value.mean())
+
     entries = list(filter(lambda x: (("val" in x) or ("test" in x)) and (not "sub" in x), entries))
     entries.sort()
 
