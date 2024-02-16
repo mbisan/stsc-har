@@ -16,7 +16,7 @@ from nets.metrics import metrics_from_cm, print_cm
 
 class SegmentationModel(LightningModule):
 
-    def __init__(self, in_channels, latent_features, n_classes, pooling, lr, weight_decayL1, weight_decayL2, name=None, overlap=1) -> None:
+    def __init__(self, in_channels, latent_features, n_classes, pooling, kernel_size, complexity_factor, lr, weight_decayL1, weight_decayL2, name=None, overlap=1) -> None:
 
         """ Wrapper for the PyTorch models used in the experiments. """
 
@@ -31,7 +31,8 @@ class SegmentationModel(LightningModule):
             self.segmentation = segmentation_dict["unet"](in_channels, n_classes, latent_features) # get_model(in_channels, latent_features, n_classes, aspp_dilate)
         elif "utime" in name:
             self.segmentation = segmentation_dict["utime"](n_classes=n_classes, in_dims=in_channels, depth = len(pooling), 
-                dilation = 1, kernel_size = 3, padding = "same", init_filters = latent_features, complexity_factor = 1.5, pools = pooling, segment_size = 1, change_size = 3)
+                dilation = 1, kernel_size = kernel_size, padding = "same", init_filters = latent_features, 
+                complexity_factor = complexity_factor, pools = pooling, segment_size = 1, change_size = kernel_size)
         elif "dlv3" in name:
             self.segmentation = segmentation_dict["dlv3"](in_channels, latent_features, n_classes, pooling)
         self.softmax = nn.Softmax()

@@ -33,7 +33,7 @@ def main(args):
     print("\n" + modelname)
     modeldir = modelname.replace("|", "_").replace(",", "_")
 
-    model = SegmentationModel(dm.n_dims, args.latent_features, dm.n_classes, args.pooling, args.lr, args.weight_decayL1, args.weight_decayL2, modelname, args.overlap)
+    model = SegmentationModel(dm.n_dims, args.latent_features, dm.n_classes, args.pooling, args.kernel_size, args.complexity_factor, args.lr, args.weight_decayL1, args.weight_decayL2, modelname, args.overlap)
 
     # save computed patterns for later use
     if not os.path.exists(os.path.join(args.training_dir)):
@@ -87,6 +87,10 @@ def get_parser():
         help="Parameter controlling L2 regularizer")
     parser.add_argument("--latent_features", default=10, type=int,
         help="Number of latent features")
+    parser.add_argument("--kernel_size", default=3, type=int,
+        help="Kernel size of convolutions")
+    parser.add_argument("--complexity_factor", default=1.5, type=float,
+        help="Complexity factor of consequent layers")
     parser.add_argument("--pooling", default=[2, 4], nargs="+", type=int,
         help="ASPP dilate rates")
     parser.add_argument("--arch", type=str,
