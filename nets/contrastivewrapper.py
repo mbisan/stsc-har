@@ -13,7 +13,7 @@ import torch
 
 from nets import encoder_dict, decoder_dict
 from nets.metrics import metrics_from_cm, print_cm
-from nets.losses import SupConLoss
+from nets.losses import SupConLoss, ContrastiveDist
 
 class ContrastiveModel(LightningModule):
 
@@ -43,7 +43,7 @@ class ContrastiveModel(LightningModule):
 
         self.project = decoder_dict["mlp"](inp_feats = latent_features*2, hid_feats = latent_features, out_feats = latent_features, hid_layers = 1)
 
-        self.contrastive_loss = SupConLoss()
+        self.contrastive_loss = ContrastiveDist()
 
         for phase in ["train", "val", "test"]:
             # TODO pensar como evaluar, lo mejor será usar un AUPR or AUROC de dos clases
@@ -74,7 +74,19 @@ class ContrastiveModel(LightningModule):
         output_p = F.normalize(output_p, p=2, dim=-1)
 
         # Compute the loss and metrics
-        loss = self.contrastive_loss(output_p.unsqueeze(1), labels=batch["label"])
+        # loss = self.contrastive_loss(output_p.unsqueeze(1), labels=batch["label"])
+
+        diff = output_p[:, None, :] - output_p[None, :, :] # shape (n, n, d)
+        ed = diff.square().sum(dim=-1) + 1e-6
+        ed = ed.sqrt()
+
+        mask = (batch["label"].unsqueeze(0) == batch["label"].unsqueeze(1))
+        mask[torch.arange(mask.shape[0]), torch.arange(mask.shape[0])] = 0
+
+        loss_maximize = (ed * ~mask).mean()
+        loss_minimize = (ed * mask).mean()
+
+        loss = loss_minimize - loss_maximize
 
         if stage != "train":
             self.probabilities.append(output_p)
@@ -82,6 +94,8 @@ class ContrastiveModel(LightningModule):
 
         # log loss and metrics
         self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
+        self.log(f"{stage}_loss_max", loss_maximize, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
+        self.log(f"{stage}_loss_min", loss_minimize, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
 
         # return loss
         if stage == "train":

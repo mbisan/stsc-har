@@ -130,3 +130,30 @@ class SupConLoss(nn.Module):
         loss = loss.view(anchor_count, batch_size).mean()
 
         return loss
+    
+class ContrastiveDist(nn.Module):
+
+    def __init__(self, epsilon: float = 1e-6) -> None:
+        
+        super().__init__()
+
+        self.epsilon = epsilon
+
+    def forward(self, features, labels):
+        '''
+            features has shape (n, d)
+            labels has shape (n)
+
+            Loss is equal to the mean difference between features of the same label 
+            minus the difference between samples of different label
+
+            Loss = Sum_ij (1 - 2 * 1(lbl[i] != lbl[j])) || f[i] - f[j] ||
+        '''
+
+        diff = features[:, None, :] - features[None, :, :] # shape (n, n, d)
+        ed = diff.square().sum(dim=-1) + self.epsilon
+        ed = ed.sqrt()
+
+        mask = 1 - 2*(labels.unsqueeze(0) != labels.unsqueeze(1))
+
+        return (ed*mask).mean()
