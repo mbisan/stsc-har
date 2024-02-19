@@ -1,37 +1,33 @@
 """ Wrapper model for the deep learning models. """
 
 # modules
-from pytorch_lightning import LightningModule
+from nets.baseWrapper import BaseWrapper
 
 # base torch
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.nn import functional as F
 import torchmetrics as tm
 import torch.nn as nn
 import numpy as np
 import torch
 
-from nets import encoder_dict, decoder_dict
+from nets import encoder_dict, decoder_dict, segmentation_dict
 from transforms.dtw import dtw_mode
-from nets.metrics import metrics_from_cm
 
-class WrapperModel(LightningModule):
+from nets.losses import SupConLoss, ContrastiveDist
+
+from sklearn.metrics import roc_auc_score, average_precision_score
+
+class DFWrapper(BaseWrapper):
 
     def __init__(self, mode, encoder_arch, decoder_arch,
         n_dims, n_classes, n_patterns, l_patterns,
         wdw_len, wdw_str,
         enc_feats, dec_feats, dec_layers, lr, voting, 
         weight_decayL1, weight_decayL2,
-        name=None) -> None:
-
-        """ Wrapper for the PyTorch models used in the experiments. """
-
-        if name is None:
-            name = "test"
+        name="test") -> None:
 
         # save parameters as attributes
-        super().__init__(), self.__dict__.update(locals())
-        self.save_hyperparameters()
+        super().__init__(lr, weight_decayL1, weight_decayL2, n_classes), self.__dict__.update(locals())
 
         # create encoder
         if mode == "img":
@@ -76,27 +72,13 @@ class WrapperModel(LightningModule):
         shape: torch.Tensor = self.encoder.get_output_shape()
 
         inp_feats = torch.prod(torch.tensor(shape[1:]))
-        out_feats = n_classes
         self.decoder = decoder_dict[decoder_arch](inp_feats=inp_feats, 
-            hid_feats=dec_feats, out_feats=out_feats, hid_layers=dec_layers)
-
-        # create softmax and flatten layers
-        self.flatten = nn.Flatten(start_dim=1)
-        self.softmax = nn.Softmax()
-
-        for phase in ["train", "val", "test"]: 
-            self.__setattr__(f"{phase}_cm", tm.ConfusionMatrix(num_classes=out_feats, task="multiclass"))
-            if phase != "train":
-                self.__setattr__(f"{phase}_auroc", tm.AUROC(num_classes=out_feats, task="multiclass", average="macro"))
+            hid_feats=dec_feats, out_feats=n_classes, hid_layers=dec_layers)
 
         self.voting = None
         if voting["n"] > 1:
             self.voting = voting
             self.voting["weights"] = (self.voting["rho"] ** (1/self.wdw_len)) ** torch.arange(self.voting["n"] - 1, -1, -1)
-
-        self.previous_predictions = None
-        self.probabilities = []
-        self.labels = []
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """ Forward pass. """
@@ -150,80 +132,147 @@ class WrapperModel(LightningModule):
 
         # return loss
         if stage == "train":
-            l1_loss = torch.tensor(0., requires_grad=True)
-            l2_loss = torch.tensor(0., requires_grad=True)
-            if self.weight_decayL1 > 0:
-                l1_loss = self.weight_decayL1 * sum(p.abs().sum() for name, p in self.named_parameters() if ("bias" not in name and "bn" not in name))
-                # self.log(f"{stage}_L1", l1_loss, on_epoch=True, on_step=True, prog_bar=True, logger=True)
-
-            if self.weight_decayL2 > 0:
-                l2_loss = self.weight_decayL2 * sum(p.square().sum() for name, p in self.named_parameters() if ("bias" not in name and "bn" not in name))
-                # self.log(f"{stage}_L2", l2_loss, on_epoch=True, on_step=True, prog_bar=True, logger=True)
-
-            return loss.to(torch.float32) + l1_loss.to(torch.float32) + l2_loss.to(torch.float32)
+            return loss.to(torch.float32) + self.regularizer_loss()
 
         return loss.to(torch.float32)
 
-    def training_step(self, batch: dict[str: torch.Tensor], batch_idx: int):
-        """ Training step. """
-        return self._inner_step(batch, stage="train")
-        
-    def validation_step(self, batch: dict[str: torch.Tensor], batch_idx: int):
-        """ Validation step. """
-        return self._inner_step(batch, stage="val")
+class SegWrapper(BaseWrapper):
 
-    def test_step(self, batch: dict[str: torch.Tensor], batch_idx: int):
-        """ Test step. """
-        return self._inner_step(batch, stage="test")
+    def __init__(self, in_channels, latent_features, n_classes, 
+            pooling, kernel_size, complexity_factor, lr, weight_decayL1, weight_decayL2, arch, name=None, overlap=1) -> None:
+
+        # save parameters as attributes
+        super().__init__(lr, weight_decayL1, weight_decayL2, n_classes), self.__dict__.update(locals())
+
+        if "unet" in arch:
+            self.segmentation = segmentation_dict[arch](in_channels, n_classes, latent_features)
+        elif "utime" in arch:
+            self.segmentation = segmentation_dict[arch](n_classes=n_classes, in_dims=in_channels, depth = len(pooling), 
+                dilation = 1, kernel_size = kernel_size, padding = "same", init_filters = latent_features, 
+                complexity_factor = complexity_factor, pools = pooling, segment_size = 1, change_size = kernel_size)
+        elif "dlv3" in arch:
+            self.segmentation = segmentation_dict[arch](in_channels, latent_features, n_classes, pooling)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.logits(x)
+        return self.softmax(x)
     
-    def log_metrics(self, stage):
-        cm = self.__getattr__(f"{stage}_cm").compute()
-        self.__getattr__(f"{stage}_cm").reset()
+    def logits(self, x: torch.Tensor) -> torch.Tensor:
+        return self.segmentation(x)
 
-        metrics = metrics_from_cm(cm)
+    def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
 
-        self.log(f"{stage}_pr", metrics["precision"].nanmean(), on_epoch=True, on_step=False, prog_bar=False, logger=True)
-        self.log(f"{stage}_re", metrics["recall"].nanmean(), on_epoch=True, on_step=False, prog_bar=True, logger=True)
-        self.log(f"{stage}_f1", metrics["f1"].nanmean(), on_epoch=True, on_step=False, prog_bar=False, logger=True)
-        self.log(f"{stage}_iou", metrics["iou"].nanmean(), on_epoch=True, on_step=False, prog_bar=False, logger=True)
+        """ Inner step for the training, validation and testing. """
+
+        # Forward pass
+        output = self.logits(batch["series"])
+
+        skip = output.shape[-1] - self.overlap
+
+        # Compute the loss and metrics
+        loss = F.cross_entropy(output, batch["scs"], ignore_index=100)
+
+        predictions = torch.argmax(output, dim=1)[:, -skip:]
+
+        self.__getattr__(f"{stage}_cm").update(predictions, batch["scs"][:, -skip:])
+        if stage != "train":
+            self.probabilities.append(torch.softmax(output, dim=1)[:, :, -skip:])
+            self.labels.append(batch["scs"][:, -skip:])
+
+        # log loss and metrics
+        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
+
+        # return loss
+        if stage == "train":
+            return loss.to(torch.float32) + self.regularizer_loss()
+
+        return loss.to(torch.float32)
+
+class ContrastiveWrapper(BaseWrapper):
+
+    # following http://arxiv.org/abs/2004.11362 : Supervised Contrastive Learning
+
+    def __init__(self, encoder_arch, in_channels, latent_features, lr, weight_decayL1, weight_decayL2, name=None, window_size=1) -> None:
+
+        # save parameters as attributes
+        super().__init__(lr, weight_decayL1, weight_decayL2, 2), self.__dict__.update(locals())
+
+        self.encoder = encoder_dict[encoder_arch](
+            channels=in_channels, ref_size=0, 
+            wdw_size=32, n_feature_maps=latent_features
+        )
+
+        self.flatten = nn.Flatten()
+        output_shape = self.encoder.get_output_shape()
+        features = torch.prod(torch.tensor(output_shape[1:]))
+
+        self.encoder_2 = decoder_dict["mlp"](inp_feats = features, hid_feats = latent_features*2, out_feats = latent_features*2, hid_layers = 1)
+
+        self.project = decoder_dict["mlp"](inp_feats = latent_features*2, hid_feats = latent_features, out_feats = latent_features, hid_layers = 1)
+
+        self.contrastive_loss = SupConLoss()
+
+        self.previous_predictions = None
+        self.repr = []
+        self.labels = []
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.encoder(x) 
+        x = self.flatten(x)
+        x = self.encoder_2(x)
+        # x must be a (n, d) dimensional matrix
+        x = F.normalize(x, p=2, dim=-1)
+        return x # projection module is only used while training
+
+    def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
+
+        """ Inner step for the training, validation and testing. """
+
+        # Forward pass
+        output = self.forward(batch["series"])
 
         if stage != "train":
-            auc_per_class = tm.functional.auroc(
-                torch.concatenate(self.probabilities, dim=0), 
-                torch.concatenate(self.labels, dim=0), 
-                task="multiclass",
-                num_classes=self.n_classes)
-            self.probabilities = []
-            self.labels = []
+            self.repr.append(output)
+            self.labels.append(batch["label"])
 
-            self.log(f"{stage}_auroc", auc_per_class.nanmean(), on_epoch=True, on_step=False, prog_bar=True, logger=True)
+        output_p = self.project(output)
+        output_p = F.normalize(output_p, p=2, dim=-1)
 
-    def on_train_epoch_end(self):
-        self.log_metrics("train")
+        # Compute the loss and metrics
+        loss = self.contrastive_loss(output_p.unsqueeze(1), labels=batch["label"])
 
-    def on_validation_epoch_end(self):
-        self.log_metrics("val")
+        # log loss and metrics
+        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
 
-    def on_test_epoch_end(self):
-        self.log_metrics("test")
+        # return loss
+        if stage == "train":
+            return loss.to(torch.float32) + self.regularize
 
-    def predict_step(self, batch: dict[str: torch.Tensor], batch_idx: int):
-        return self(batch[self.dsrc])
+        return loss.to(torch.float32)
 
-    def configure_optimizers(self):
-        """ Configure the optimizers. """
-        mode = "max"
-        monitor = "val_re"
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": ReduceLROnPlateau(optimizer, 
-                    mode=mode, factor=np.sqrt(0.1), patience=2, min_lr=1e-6),
-                "interval": "epoch",
-                "monitor": monitor,
-                "frequency": 1
-                # If "monitor" references validation metrics, then "frequency" should be set to a
-                # multiple of "trainer.check_val_every_n_epoch".
-            },
-        }
+    def log_metrics(self, stage):
+        if stage=="train":
+            return
+
+        representations = torch.concatenate(self.repr, dim=0) 
+        all_labels = torch.concatenate(self.labels, dim=0)
+
+        dissimilarities = []
+        labels = []
+        for i in range(0, all_labels.shape[0]-self.window_size, self.window_size):
+            diff = (representations[i, :] * representations[i+self.window_size, :]).sum()
+            dissimilarities.append(diff)
+            labels.append(0 if all_labels[i] == all_labels[i+self.window_size] else 1)
+
+        dissimilarities = np.array(dissimilarities)
+        labels = np.array(labels)
+
+        try:
+            auroc = roc_auc_score(labels, dissimilarities)
+            aupr = average_precision_score(labels, dissimilarities)
+        except:
+            auroc = 0
+            aupr = 0
+
+        self.log(f"{stage}_auroc", auroc, on_epoch=True, on_step=False, prog_bar=True, logger=True)
+        self.log(f"{stage}_aupr", aupr, on_epoch=True, on_step=False, prog_bar=True, logger=True)

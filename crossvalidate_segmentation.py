@@ -6,7 +6,7 @@ from argparse import ArgumentParser, Namespace
 
 from utils.helper_functions import str_time
 from nets.segmentationwrapper import SegmentationModel
-from trainsegmentation import load_tsdataset
+from trainseg import load_tsdataset
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.utilities.model_summary import summarize

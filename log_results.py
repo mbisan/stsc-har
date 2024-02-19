@@ -59,7 +59,7 @@ def main(args):
         cm_summed = torch.from_numpy(cm_summed)
         print_cm(cm_summed, cm_summed.shape[0])
         for key, value in metrics_from_cm(cm_summed).items():
-            print(key, value, "->", value.mean())
+            print(key, value, "->", value.mean().item(), f"({value.std().item()})")
 
     entries = list(filter(lambda x: (("val" in x) or ("test" in x)) and (not "sub" in x), entries))
     entries.sort()

@@ -43,7 +43,6 @@ baseArguments = {
     "n_val_subjects": 4,
     "arch": "utime",
     "latent_features": 12,
-    "pooling": [[2, 2, 2]],
     "batch_size": 64,
     "overlap": 0,
     "max_epochs": 10,
@@ -56,6 +55,7 @@ segExperiments = {
     "mode": "seg",
     "window_size": 128,
     "window_stride": 1,
+    "pooling": [[2, 2, 2]],
 }
 
 RAM = 16

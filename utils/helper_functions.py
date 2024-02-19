@@ -11,16 +11,24 @@ import pandas as pd
 from data.har.har_datasets import *
 from data.dfdataset import LDFDataset, DFDataset
 from data.stsdataset import LSTSDataset
+from data.segdataset import LSegDataset
 from data.har.label_mappings import *
 from data.base import split_by_test_subject
 
 from utils.pattern_extract import *
-from utils.methods import create_model_from_DM
 
 import torch
 from torchvision.transforms import Normalize
 
 def get_parser():
+    '''
+        dataset, dataset_dir, batch_size, num_workers, window_size, window_stride
+        normalize, pattern_size, compute_n, subjects_for_test, encoder_architecture
+        decoder_architecture, max_epochs, lr, decoder_features, encoder_features
+        decoder_layers, mode, reduce_imbalance, label_mode, num_medoids, voting
+        rho, pattern_type, overlap, mtf_bins, training_dir, n_val_subjects, cached
+        weight_decayL1, weight_decayL2, pooling
+    '''
     parser = ArgumentParser()
 
     parser.add_argument("--dataset", type=str,
@@ -66,8 +74,8 @@ def get_parser():
         help="Parameter of the online-dtw algorithm, the window_size-th root is used as the voting parameter")
     parser.add_argument("--pattern_type", type=str, default="med",
         help="Type of pattern to use during DM computation") # pattern types: "med"
-    # parser.add_argument("--overlap", default=-1, type=int, 
-    #     help="Overlap of observations between training and test examples, default -1 for maximum overlap (equivalent to overlap set to window size -1)")
+    parser.add_argument("--overlap", default=-1, type=int, 
+        help="Overlap of observations between training and test examples, default -1 for maximum overlap (equivalent to overlap set to window size -1)")
     parser.add_argument("--mtf_bins", default=10, type=int, 
         help="Number of bins for mtf computation")
     parser.add_argument("--training_dir", default="training", type=str, 
@@ -80,6 +88,10 @@ def get_parser():
         help="Parameter controlling L1 regularizer")
     parser.add_argument("--weight_decayL2", default=0, type=float,
         help="Parameter controlling L2 regularizer")
+    parser.add_argument("--pooling", nargs="+", type=int, 
+        help="Pooling in each layer of utime")
+    parser.add_argument("--cf", default=1, type=float,
+        help="Complexity factor of utime")
 
     return parser
 
@@ -325,6 +337,33 @@ def load_tsdataset(
 
     return dm
 
+
+def load_segdataset(
+        dataset_name,
+        dataset_home_directory = None,
+        batch_size = 16,
+        num_workers = 1,
+        window_size = 32,
+        window_stride = 1,
+        normalize = True,
+        subjects_for_test = None,
+        reduce_train_imbalance = False,
+        overlap = -1,
+        n_val_subjects = 1):
+    
+    ds = load_dataset(dataset_name, dataset_home_directory, window_size, window_stride, normalize)
+        
+    print(f"Loaded dataset {dataset_name} with a total of {len(ds)} observations for window size {window_size}")
+
+    data_split = split_by_test_subject(ds, subjects_for_test, n_val_subjects)
+
+    dm = LSegDataset(ds, data_split=data_split, batch_size=batch_size, random_seed=42, 
+        num_workers=num_workers, reduce_train_imbalance=reduce_train_imbalance, skip=(window_size - overlap))
+    dm.l_patterns = 1
+
+    return dm
+
+
 def load_dm(args, patterns = None):
     if args.mode == "img":
         dm = load_dmdataset(
@@ -334,6 +373,13 @@ def load_dm(args, patterns = None):
             compute_n=args.compute_n, subjects_for_test=args.subjects_for_test, reduce_train_imbalance=args.reduce_imbalance, 
             label_mode=args.label_mode, num_medoids=args.num_medoids, pattern_type=args.pattern_type, # overlap=args.overlap, 
             n_val_subjects=args.n_val_subjects, cached=args.cached, patterns=patterns)
+    elif args.mode == "seg":
+        dm = load_segdataset(
+            args.dataset, dataset_home_directory=args.dataset_dir, 
+            batch_size=args.batch_size, num_workers=args.num_workers, 
+            window_size=args.window_size, window_stride=args.window_stride, normalize=args.normalize,
+            subjects_for_test=args.subjects_for_test, reduce_train_imbalance=args.reduce_imbalance, 
+            overlap=args.overlap, n_val_subjects=args.n_val_subjects)
     else:
         dm = load_tsdataset(
             args.dataset, dataset_home_directory=args.dataset_dir, 
@@ -345,13 +391,3 @@ def load_dm(args, patterns = None):
     print(f"Using {len(dm.ds_train)} observations for training, {len(dm.ds_val)} for validation and {len(dm.ds_test)} observations for test")
   
     return dm
-
-def get_model(name, args, dm):
-
-    model = create_model_from_DM(dm, name=name, 
-        mode=args.mode, enc_arch=args.encoder_architecture, dec_arch=args.decoder_architecture,
-        lr=args.lr, enc_feats=args.encoder_features, 
-        dec_feats=args.decoder_features, dec_layers=args.decoder_layers,
-        voting={"n": args.voting, "rho": args.rho}, weight_decayL1=args.weight_decayL1, weight_decayL2=args.weight_decayL2)
-    
-    return model

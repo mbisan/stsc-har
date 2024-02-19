@@ -24,7 +24,7 @@ cd $HOME/stsc-har
 source $HOME/.bashrc
 source activate dev2
 
-python training.py {get_command(args)}
+python {args.command} {get_command(args)}
 '''
 
 class EmptyExperiment:
