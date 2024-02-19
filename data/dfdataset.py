@@ -37,6 +37,8 @@ class DFDataset(Dataset):
         self.dm_transform = dm_transform
 
         self.n_patterns = self.patterns.shape[0] if len(self.patterns.shape) == 3 else self.patterns.shape[0] * self.stsds.STS.shape[0]
+        if not self.stsds.feature_group is None:
+            self.n_patterns *= len(self.stsds.feature_group)
 
         self.rho = rho
 
@@ -69,10 +71,15 @@ class DFDataset(Dataset):
         self.id_to_split = np.searchsorted(self.stsds.splits, self.stsds.indices) - 1
 
     def _compute_dm(self, pattern, split, save_path):
-        if len(pattern.shape) == 3:
-            DM = compute_oDTW(self.stsds.STS[:, split[0]:split[1]], pattern, rho=self.rho)
-        elif len(pattern.shape) == 2:
-            DM = compute_oDTW_channel(self.stsds.STS[:, split[0]:split[1]], pattern, rho=self.rho)
+        if not self.stsds.feature_group is None:
+            DM = self._compute_dm_groups(pattern, split, save_path)
+
+        else:
+
+            if len(pattern.shape) == 3:
+                DM = compute_oDTW(self.stsds.STS[:, split[0]:split[1]], pattern, rho=self.rho)
+            elif len(pattern.shape) == 2:
+                DM = compute_oDTW_channel(self.stsds.STS[:, split[0]:split[1]], pattern, rho=self.rho)
 
         # put time dimension in the first dimension
         DM = np.ascontiguousarray(np.transpose(DM, (2, 0, 1)))
@@ -83,6 +90,18 @@ class DFDataset(Dataset):
         else:
             with open(save_path, "wb") as f:
                 np.save(f, DM)
+
+    def _compute_dm_groups(self, pattern, split, save_path):
+        DM_groups = []
+        for group in self.stsds.feature_group:
+            if len(pattern.shape) == 3:
+                DM = compute_oDTW(self.stsds.STS[group, split[0]:split[1]], pattern[:,group,:], rho=self.rho)
+            elif len(pattern.shape) == 2:
+                DM = compute_oDTW_channel(self.stsds.STS[:, split[0]:split[1]], pattern, rho=self.rho)
+
+            DM_groups.append(DM)
+        
+        return np.concatenate(DM_groups, axis=0)
 
     def __len__(self):
         return len(self.stsds)

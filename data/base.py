@@ -28,6 +28,8 @@ class STSDataset(Dataset):
 
         self.indices = None
 
+        self.feature_group = None # dict with groups of features i.e. [np.array([0, 1, 2]), np.array([3, 4, 5])]
+
     def __len__(self):
         return self.indices.shape[0]
     
