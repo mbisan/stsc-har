@@ -154,6 +154,7 @@ class ContrastiveDist(nn.Module):
         ed = diff.square().sum(dim=-1) + self.epsilon
         ed = ed.sqrt()
 
-        mask = 1 - 2*(labels.unsqueeze(0) != labels.unsqueeze(1))
+        minimize = ed * (labels.unsqueeze(0) == labels.unsqueeze(1))
+        maximize = ed * (labels.unsqueeze(0) != labels.unsqueeze(1))
 
-        return (ed*mask).mean()
+        return minimize.mean() - maximize.mean()

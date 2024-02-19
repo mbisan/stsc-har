@@ -32,7 +32,7 @@ def main(args):
     modeldir = modelname.replace("|", "_").replace(",", "_")
 
     model = ContrastiveModel(
-        args.arch, dm.n_dims, args.latent_features, args.lr, args.weight_decayL1, args.weight_decayL2, modelname)
+        args.arch, dm.n_dims, args.latent_features, args.lr, args.weight_decayL1, args.weight_decayL2, modelname, window_size=args.window_size)
 
     # save computed patterns for later use
     if not os.path.exists(os.path.join(args.training_dir)):

@@ -15,11 +15,13 @@ from nets import encoder_dict, decoder_dict
 from nets.metrics import metrics_from_cm, print_cm
 from nets.losses import SupConLoss, ContrastiveDist
 
+from sklearn.metrics import roc_auc_score, average_precision_score
+
 class ContrastiveModel(LightningModule):
 
     # following http://arxiv.org/abs/2004.11362 : Supervised Contrastive Learning
 
-    def __init__(self, encoder_arch, in_channels, latent_features, lr, weight_decayL1, weight_decayL2, name=None) -> None:
+    def __init__(self, encoder_arch, in_channels, latent_features, lr, weight_decayL1, weight_decayL2, name=None, window_size=1) -> None:
 
         """ Wrapper for the PyTorch models used in the experiments. """
 
@@ -43,7 +45,7 @@ class ContrastiveModel(LightningModule):
 
         self.project = decoder_dict["mlp"](inp_feats = latent_features*2, hid_feats = latent_features, out_feats = latent_features, hid_layers = 1)
 
-        self.contrastive_loss = ContrastiveDist()
+        self.contrastive_loss = SupConLoss()
 
         for phase in ["train", "val", "test"]:
             # TODO pensar como evaluar, lo mejor será usar un AUPR or AUROC de dos clases
@@ -53,7 +55,7 @@ class ContrastiveModel(LightningModule):
             pass
 
         self.previous_predictions = None
-        self.probabilities = []
+        self.repr = []
         self.labels = []
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -70,32 +72,19 @@ class ContrastiveModel(LightningModule):
 
         # Forward pass
         output = self.forward(batch["series"])
+
+        if stage != "train":
+            self.repr.append(output)
+            self.labels.append(batch["label"])
+
         output_p = self.project(output)
         output_p = F.normalize(output_p, p=2, dim=-1)
 
         # Compute the loss and metrics
-        # loss = self.contrastive_loss(output_p.unsqueeze(1), labels=batch["label"])
-
-        diff = output_p[:, None, :] - output_p[None, :, :] # shape (n, n, d)
-        ed = diff.square().sum(dim=-1) + 1e-6
-        ed = ed.sqrt()
-
-        mask = (batch["label"].unsqueeze(0) == batch["label"].unsqueeze(1))
-        mask[torch.arange(mask.shape[0]), torch.arange(mask.shape[0])] = 0
-
-        loss_maximize = (ed * ~mask).mean()
-        loss_minimize = (ed * mask).mean()
-
-        loss = loss_minimize - loss_maximize
-
-        if stage != "train":
-            self.probabilities.append(output_p)
-            self.labels.append(batch["series"])
+        loss = self.contrastive_loss(output_p.unsqueeze(1), labels=batch["label"])
 
         # log loss and metrics
         self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
-        self.log(f"{stage}_loss_max", loss_maximize, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
-        self.log(f"{stage}_loss_min", loss_minimize, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
 
         # return loss
         if stage == "train":
@@ -126,16 +115,30 @@ class ContrastiveModel(LightningModule):
         return self._inner_step(batch, stage="test")
     
     def log_metrics(self, stage):
-        # auc_per_class = tm.functional.auroc(
-        #     torch.concatenate(self.probabilities, dim=0), 
-        #     torch.concatenate(self.labels, dim=0), 
-        #     task="multiclass",
-        #     num_classes=self.n_classes)
-        # self.probabilities = []
-        # self.labels = []
+        representations = torch.concatenate(self.repr, dim=0) 
+        all_labels = torch.concatenate(self.labels, dim=0)
+        self.probabilities = []
+        self.labels = []
 
-        # self.log(f"{stage}_auroc", auc_per_class.nanmean(), on_epoch=True, on_step=False, prog_bar=True, logger=True)
-        pass
+        dissimilarities = []
+        labels = []
+        for i in range(0, all_labels.shape[0]-self.window_size, self.window_size):
+            diff = (representations[i, :] * representations[i+self.window_size, :]).sum()
+            dissimilarities.append(diff)
+            labels.append(0 if all_labels[i] == all_labels[i+self.window_size] else 1)
+
+        dissimilarities = np.array(dissimilarities)
+        labels = np.array(labels)
+
+        try:
+            auroc = roc_auc_score(labels, dissimilarities)
+            aupr = average_precision_score(labels, dissimilarities)
+        except:
+            auroc = 0
+            aupr = 0
+
+        self.log(f"{stage}_auroc", auroc, on_epoch=True, on_step=False, prog_bar=True, logger=True)
+        self.log(f"{stage}_aupr", aupr, on_epoch=True, on_step=False, prog_bar=True, logger=True)
 
     def on_train_epoch_end(self):
         pass

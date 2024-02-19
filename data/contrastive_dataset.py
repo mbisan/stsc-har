@@ -9,18 +9,23 @@ from data.base import STSDataset
 class StreamingTimeSeriesCopy(Dataset):
 
     def __init__(self,
-            stsds: STSDataset, indices: np.ndarray
+            stsds: STSDataset, indices: np.ndarray, delay: int = 0
             ) -> None:
         super().__init__()
 
         self.stsds = stsds
         self.indices = indices
+        self.delay = delay
         
     def __len__(self):
         return self.indices.shape[0]
     
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor, int]:
-        ts, c = self.stsds[self.indices[index]]
+        if self.delay:
+            id = min(self.indices[index] + np.random.randint(low=self.delay, high=2*self.delay), len(self.stsds)-1)
+            ts, c = self.stsds[id]
+        else:
+            ts, c = self.stsds[self.indices[index]]
         return {"series": ts, "label": torch.mode(c).values}
     
     def __del__(self):
@@ -68,18 +73,28 @@ class LConDataset(LightningDataModule):
         test_indices = sameClassIndex[data_split["test"](sameClassIndex)]
         val_indices = sameClassIndex[data_split["val"](sameClassIndex)]
 
-        sameClassClass = sameClassClass[data_split["train"](sameClassIndex)]
-        self.train_label_weights = np.empty_like(sameClassClass, dtype=np.float32)
+        change_points = self.stsds.getChangePointIndex()
+        sameClassIndex, sameClassClass = self.stsds.getSameClassWindowIndex() # array with indices of the same class, and class of the index
 
-        cl, counts = torch.unique(sameClassClass, return_counts=True)
+        # get sameclass window indices among train indices
+        sameclass_indices = sameClassIndex[data_split["train"](sameClassIndex)]
+        sameclass_class = sameClassClass[data_split["train"](sameClassIndex)]
+        sameclass_indices_weights = torch.empty_like(torch.from_numpy(sameclass_indices), dtype=torch.float32)
+
+        cl, counts = torch.unique(sameclass_class, return_counts=True)
         for i in range(cl.shape[0]):
-            self.train_label_weights[sameClassClass == cl[i]] = sameClassClass.shape[0] / counts[i]
+            sameclass_indices_weights[sameclass_class == cl[i]] = 1 / counts[i]
 
-        examples_per_epoch = int(counts.float().mean().ceil().item())
+        examples_per_epoch = int(counts.float().mean().ceil().item()) + change_points.shape[0]
+
+        train_indices = torch.cat([torch.from_numpy(sameclass_indices), torch.from_numpy(change_points)])
+        train_indices_weights = torch.cat([sameclass_indices_weights, torch.full_like(torch.from_numpy(change_points), 1/change_points.shape[0])])
+
         print(f"Sampling {examples_per_epoch} (balanced) observations per epoch.")
-        self.train_sampler = WeightedRandomSampler(self.train_label_weights, int(counts.float().mean().ceil().item()), replacement=True)
+        self.train_sampler = WeightedRandomSampler(train_indices_weights, int(counts.float().mean().ceil().item()), replacement=True)
+        # train_indices = reduce_imbalance(train_indices, self.train_labels, seed=random_seed)
 
-        self.ds_train = StreamingTimeSeriesCopy(self.stsds, train_indices)
+        self.ds_train = StreamingTimeSeriesCopy(self.stsds, train_indices, delay=int(self.wdw_len/3))
         self.ds_test = StreamingTimeSeriesCopy(self.stsds, test_indices)
         self.ds_val = StreamingTimeSeriesCopy(self.stsds, val_indices)
         
