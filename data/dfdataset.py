@@ -37,7 +37,7 @@ class DFDataset(Dataset):
         self.dm_transform = dm_transform
 
         self.n_patterns = self.patterns.shape[0] if len(self.patterns.shape) == 3 else self.patterns.shape[0] * self.stsds.STS.shape[0]
-        if not self.stsds.feature_group is None:
+        if not self.stsds.feature_group is None and len(self.patterns.shape) == 3:
             self.n_patterns *= len(self.stsds.feature_group)
 
         self.rho = rho
@@ -71,7 +71,7 @@ class DFDataset(Dataset):
         self.id_to_split = np.searchsorted(self.stsds.splits, self.stsds.indices) - 1
 
     def _compute_dm(self, pattern, split, save_path):
-        if not self.stsds.feature_group is None:
+        if (not self.stsds.feature_group is None) and len(pattern.shape) == 3:
             DM = self._compute_dm_groups(pattern, split, save_path)
 
         else:
@@ -94,10 +94,7 @@ class DFDataset(Dataset):
     def _compute_dm_groups(self, pattern, split, save_path):
         DM_groups = []
         for group in self.stsds.feature_group:
-            if len(pattern.shape) == 3:
-                DM = compute_oDTW(self.stsds.STS[group, split[0]:split[1]], pattern[:,group,:], rho=self.rho)
-            elif len(pattern.shape) == 2:
-                DM = compute_oDTW_channel(self.stsds.STS[:, split[0]:split[1]], pattern, rho=self.rho)
+            DM = compute_oDTW(self.stsds.STS[group, split[0]:split[1]], pattern[:,group,:], rho=self.rho)
 
             DM_groups.append(DM)
         

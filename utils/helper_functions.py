@@ -42,7 +42,7 @@ def load_dataset(dataset_name, dataset_home_directory, window_size, window_strid
             wsize=window_size, wstride=window_stride, normalize=normalize, label_mapping=harth_label_mapping)
     elif dataset_name == "HARTH_g":
         ds = HARTHDataset(
-            os.path.join(dataset_home_directory, dataset_name), 
+            os.path.join(dataset_home_directory, "HARTH"), 
             wsize=window_size, wstride=window_stride, normalize=normalize, label_mapping=harth_label_mapping)
         ds.feature_group = [np.array([0, 1, 2]), np.array([3, 4, 5])]
     
