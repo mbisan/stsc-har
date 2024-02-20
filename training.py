@@ -1,12 +1,12 @@
 import os
 from time import time
 
-from utils.helper_functions import load_dm, get_parser, str_time
+from utils.helper_functions import load_dm, str_time
 from utils.methods import train_model
 
-from utils.arguments import get_model_name
+from utils.arguments import get_parser, get_model_name
 
-from nets.wrapper import DFWrapper
+from nets.wrapper import DFWrapper, SegWrapper
 
 from pytorch_lightning import seed_everything
 import numpy as np
@@ -22,13 +22,20 @@ def main(args):
 
     print("\n" + modelname)
     
-    model = DFWrapper(
-        args.mode,
-        args.encoder_architecture, args.decoder_architecture, 
-        dm.n_dims, dm.n_classes, dm.n_patterns, dm.l_patterns, dm.wdw_len, dm.wdw_str, 
-        args.encoder_features, args.decoder_features, args.decoder_layers,
-        args.lr, {"n": args.voting, "rho": args.rho}, 
-        args.weight_decayL1, args.weight_decayL2, modelname)
+    if args.mode == "seg":
+        model = SegWrapper(
+            dm.n_dims, args.encoder_features, dm.n_classes, args.pooling, args.pattern_size, 
+            args.cf, args.lr, args.weight_decayL1, args.weight_decayL2, args.encoder_architecture, modelname, args.overlap)
+        modeltype = SegWrapper
+    else:
+        model = DFWrapper(
+            args.mode,
+            args.encoder_architecture, args.decoder_architecture, 
+            dm.n_dims, dm.n_classes, dm.n_patterns, dm.l_patterns, dm.wdw_len, dm.wdw_str, 
+            args.encoder_features, args.decoder_features, args.decoder_layers,
+            args.lr, {"n": args.voting, "rho": args.rho}, 
+            args.weight_decayL1, args.weight_decayL2, modelname)
+        modeltype = DFWrapper
 
     # save computed patterns for later use
     if not os.path.exists(os.path.join(args.training_dir)):
@@ -47,7 +54,7 @@ def main(args):
         }, 
         metrics={
             "target": "val_re", "mode": "max"
-        }, modeltype=DFWrapper)
+        }, modeltype=modeltype)
     
     with open(os.path.join(args.training_dir, modeldir, "results.dict"), "w") as f:
         f.write(str({**data, **args.__dict__, "name": modelname}))

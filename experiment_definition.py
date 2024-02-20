@@ -23,9 +23,11 @@ baseArguments = {
     "voting": 1,
     "overlap": -1,
     "max_epochs": 20,
-    "training_dir": "training_harth_gasf",
+    "training_dir": "training_tests2",
     "weight_decayL1": 0.0001,
-    "weight_decayL2": 0.00001
+    "weight_decayL2": 0.00001,
+    "command": "training.py",
+    "cached": False
 }
 
 imgExperiments = {
@@ -38,7 +40,6 @@ imgExperiments = {
     "pattern_size": 25,
     "cached": False,
     "rho": 0.1,
-    "command": "training.py"
 }
 
 dtwExperiments = {
@@ -46,7 +47,6 @@ dtwExperiments = {
     "window_stride": 1,
     "mode": "dtw",
     "pattern_size": [8, 16, 24],
-    "command": "training.py"
 }
 
 dtwcExperiments = {
@@ -54,28 +54,24 @@ dtwcExperiments = {
     "window_stride": 1,
     "mode": "dtw_c",
     "pattern_size": [8, 16, 24],
-    "command": "training.py"
 }
 
 tsExperiments = {
     "window_size": 50,
     "window_stride": 1,
     "mode": "ts",
-    "command": "training.py"
 }
 
 gasfExperiments = {
     "window_size": 50,
     "window_stride": 1,
     "mode": "gasf",
-    "command": "training.py"
 }
 
 gadfExperiments = {
     "window_size": 40,
     "window_stride": 1,
     "mode": "gadf",
-    "command": "training.py"
 }
 
 mtffExperiments = {
@@ -83,7 +79,6 @@ mtffExperiments = {
     "window_stride": 1,
     "mode": "mtf",
     "mtf_bins": 16,
-    "command": "training.py"
 }
 
 segExperiments = {
@@ -91,10 +86,11 @@ segExperiments = {
     "window_size": 128,
     "window_stride": 1,
     "pooling": [[2, 2, 2]],
-    "command": "trainsegmentation.py"
+    "cf": 1.5,
+    "pattern_size": 5
 }
 
 RAM = 16
 CPUS = 16
 
-experiments = [gasfExperiments] #, dtwExperiments, dtwcExperiments, tsExperiments, gasfExperiments, gadfExperiments, mtffExperiments]
+experiments = [segExperiments] #, dtwExperiments, dtwcExperiments, tsExperiments, gasfExperiments, gadfExperiments, mtffExperiments]

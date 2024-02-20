@@ -43,7 +43,7 @@ class BaseWrapper(LightningModule):
         self.softmax = nn.Softmax()
 
         for phase in ["train", "val", "test"]: 
-            self.__setattr__(f"{phase}_cm", tm.ConfusionMatrix(num_classes=num_classes, task="multiclass"))
+            self.__setattr__(f"{phase}_cm", tm.ConfusionMatrix(num_classes=num_classes, task="multiclass", ignore_index=100))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         pass
