@@ -28,6 +28,7 @@ class DFWrapper(BaseWrapper):
 
         # save parameters as attributes
         super().__init__(lr, weight_decayL1, weight_decayL2, n_classes), self.__dict__.update(locals())
+        self.save_hyperparameters()
 
         # create encoder
         if mode == "img":
@@ -128,7 +129,7 @@ class DFWrapper(BaseWrapper):
             self.labels.append(batch["label"])
 
         # log loss and metrics
-        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=True, prog_bar=True, logger=True)
+        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
 
         # return loss
         if stage == "train":
@@ -143,6 +144,7 @@ class SegWrapper(BaseWrapper):
 
         # save parameters as attributes
         super().__init__(lr, weight_decayL1, weight_decayL2, n_classes), self.__dict__.update(locals())
+        self.save_hyperparameters()
 
         if "unet" in arch:
             self.segmentation = segmentation_dict[arch](in_channels, n_classes, latent_features)
@@ -196,6 +198,7 @@ class ContrastiveWrapper(BaseWrapper):
 
         # save parameters as attributes
         super().__init__(lr, weight_decayL1, weight_decayL2, 2), self.__dict__.update(locals())
+        self.save_hyperparameters()
 
         self.encoder = encoder_dict[encoder_arch](
             channels=in_channels, ref_size=0, 

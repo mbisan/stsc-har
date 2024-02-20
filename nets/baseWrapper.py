@@ -121,6 +121,7 @@ class BaseWrapper(LightningModule):
         self.log(f"{stage}_re", metrics["recall"].nanmean(), on_epoch=True, on_step=False, prog_bar=True, logger=True)
         self.log(f"{stage}_f1", metrics["f1"].nanmean(), on_epoch=True, on_step=False, prog_bar=False, logger=True)
         self.log(f"{stage}_iou", metrics["iou"].nanmean(), on_epoch=True, on_step=False, prog_bar=False, logger=True)
+        self.log(f"{stage}_acc", metrics["accuracy"].nanmean(), on_epoch=True, on_step=False, prog_bar=False, logger=True)
 
         if stage == "test":
             self.cm_last = cm

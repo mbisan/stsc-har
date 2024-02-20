@@ -69,7 +69,7 @@ def get_parser():
         help="Parameter controlling L1 regularizer")
     parser.add_argument("--weight_decayL2", default=0, type=float,
         help="Parameter controlling L2 regularizer")
-    parser.add_argument("--pooling", nargs="+", type=int, 
+    parser.add_argument("--pooling", nargs="+", type=int, default=None,
         help="Pooling in each layer of utime")
     parser.add_argument("--cf", default=1, type=float,
         help="Complexity factor of utime")

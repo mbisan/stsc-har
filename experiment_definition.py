@@ -5,12 +5,12 @@ cross_validate = {
     "HARTH_g": [[21],[20],[19],[18],[17],[16],[15],[14],[13],[12],[11],[10],[9],[8],[7],[6],[5],[4],[3],[2],[1],[0]],    
 }
 
-dataset = "HARTH"
+dataset = "UCI-HAR"
 
 baseArguments = {
     "num_workers": 8,
     "dataset": dataset,
-    "subjects_for_test": cross_validate[dataset],
+    "subjects_for_test": [[1, 2, 3]], #cross_validate[dataset],
     "lr": 0.001,
     "n_val_subjects": 4,
     "encoder_architecture": "cnn_gap_img",
@@ -23,7 +23,7 @@ baseArguments = {
     "voting": 1,
     "overlap": -1,
     "max_epochs": 20,
-    "training_dir": "training_tests2",
+    "training_dir": "training_tests3",
     "weight_decayL1": 0.0001,
     "weight_decayL2": 0.00001,
     "command": "training.py",
@@ -93,4 +93,4 @@ segExperiments = {
 RAM = 16
 CPUS = 16
 
-experiments = [segExperiments] #, dtwExperiments, dtwcExperiments, tsExperiments, gasfExperiments, gadfExperiments, mtffExperiments]
+experiments = [imgExperiments, segExperiments] #, dtwExperiments, dtwcExperiments, tsExperiments, gasfExperiments, gadfExperiments, mtffExperiments]

@@ -12,8 +12,9 @@ def metrics_from_cm(cm):
     recall = TP/(TP+FN) # this is the same as accuracy per class
     f1 = 2*(precision*recall)/(precision + recall)
     iou = TP/(TP+FP+FN) # iou per class
+    accuracy = (TP + TN)/(TP + FP + FN + TN)
 
-    return {"precision": precision, "recall": recall, "f1": f1, "iou": iou}
+    return {"precision": precision, "recall": recall, "f1": f1, "iou": iou, "accuracy": accuracy}
 
 def print_cm(cm, num_classes):
     cm=cm/cm.sum(1, keepdim=True)

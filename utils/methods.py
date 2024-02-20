@@ -42,4 +42,4 @@ def train_model(
     # run the validation with the final weights
     data = tr.test(model, datamodule=dm)
 
-    return model, {**data[0], "cm": repr(model.cm_last.tolist()), "path": ckpt.best_model_path}
+    return model, {**data[0], "cm": model.cm_last.tolist(), "path": ckpt.best_model_path}

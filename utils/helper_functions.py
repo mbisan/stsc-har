@@ -15,6 +15,12 @@ from utils.patterns import get_patterns
 import torch
 from torchvision.transforms import Normalize
 
+def cm_str(cm):
+    str_res = "<>[\n"
+    for i in range(len(cm)):
+        str_res += "    [" + ",".join([f"{cm[i][j]:>6}" for j in range(len(cm[i]))]) + "],\n"
+    str_res = str_res[:-2] + "\n  <>]"
+    return str_res
 
 def load_dataset(dataset_name, dataset_home_directory, window_size, window_stride, normalize):
  
@@ -152,7 +158,7 @@ def load_dm(args, patterns = None):
             window_size=args.window_size, window_stride=args.window_stride, normalize=args.normalize, pattern_size=args.pattern_size,
             subjects_for_test=args.subjects_for_test, reduce_train_imbalance=args.reduce_imbalance, 
             label_mode=args.label_mode, mode=args.mode, mtf_bins=args.mtf_bins, n_val_subjects=args.n_val_subjects,
-            skip=args.window_size - args.overlap) 
+            skip=(args.window_size - args.overlap) if args.overlap>1 else 1) 
 
     print(f"Using {len(dm.ds_train)} observations for training, {len(dm.ds_val)} for validation and {len(dm.ds_test)} observations for test")
   

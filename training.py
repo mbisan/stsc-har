@@ -1,7 +1,7 @@
 import os
 from time import time
 
-from utils.helper_functions import load_dm, str_time
+from utils.helper_functions import load_dm, str_time, cm_str
 from utils.methods import train_model
 
 from utils.arguments import get_parser, get_model_name
@@ -10,6 +10,8 @@ from nets.wrapper import DFWrapper, SegWrapper
 
 from pytorch_lightning import seed_everything
 import numpy as np
+
+import json
 
 import warnings # shut up warnings
 warnings.simplefilter("ignore", category=UserWarning)
@@ -56,8 +58,11 @@ def main(args):
             "target": "val_re", "mode": "max"
         }, modeltype=modeltype)
     
-    with open(os.path.join(args.training_dir, modeldir, "results.dict"), "w") as f:
-        f.write(str({**data, **args.__dict__, "name": modelname}))
+    data = {**data, "args": args.__dict__, "name": modelname}
+    data["cm"] = cm_str(data["cm"])
+    data = json.dumps(data, indent=2).replace("<>]\"", "]").replace("\"<>", "").replace("\\n", "\n")
+    with open(os.path.join(args.training_dir, modeldir, "results.json"), "w") as f:
+        f.write(data)
     
     print(data)
 
