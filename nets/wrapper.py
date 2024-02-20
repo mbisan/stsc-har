@@ -103,7 +103,7 @@ class DFWrapper(BaseWrapper):
         output = self.logits(batch[self.dsrc])
 
         # Compute the loss and metrics
-        loss = F.cross_entropy(output, batch["label"])
+        loss = F.cross_entropy(output, batch["label"], ignore_index=100)
 
         if stage == "train" or self.voting is None:
             predictions = torch.argmax(output, dim=1)

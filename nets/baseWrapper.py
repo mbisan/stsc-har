@@ -131,7 +131,8 @@ class BaseWrapper(LightningModule):
                 torch.concatenate(self.probabilities, dim=0), 
                 torch.concatenate(self.labels, dim=0), 
                 task="multiclass",
-                num_classes=self.n_classes)
+                num_classes=self.n_classes,
+                ignore_index=100)
             self.probabilities = []
             self.labels = []
 
