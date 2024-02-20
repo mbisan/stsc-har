@@ -1,7 +1,7 @@
 import os
 
 from utils.arguments import get_model_name, get_command
-from experiment_definition import experiments, baseArguments, RAM, CPUS
+from experiment_definition import experiments, baseArguments
 
 def create_jobs(args):
     modelname = get_model_name(args)
@@ -12,8 +12,8 @@ def create_jobs(args):
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task={CPUS}
-#SBATCH --mem={RAM}GB
+#SBATCH --cpus-per-task={args.cpus}
+#SBATCH --mem={args.ram}GB
 #SBATCH --time=1-00:00:00
 #SBATCH --job-name={modelname_clean}
 #SBATCH --output=O-%x.%j.out
@@ -86,15 +86,13 @@ def produce_experiments(args):
     return jobs, cache_dir
 
 if __name__ == "__main__":
-    jobs = []
     for exp in experiments:
-        j, cache_dir = produce_experiments({**baseArguments, **exp})
-        jobs += j
+        jobs, cache_dir = produce_experiments({**baseArguments, **exp})
     
-    bash_script = "#!\\bin\\bash\n" + "\n".join(jobs)
-    
-    with open(os.path.join(cache_dir, "launch.sh"), "w") as f:
-        f.write(bash_script)
+        bash_script = "#!\\bin\\bash\n" + "\n".join(jobs)
+        
+        with open(os.path.join(cache_dir, "launch.sh"), "w") as f:
+            f.write(bash_script)
 
-    print(f"Number of experiments created: {len(jobs)}")
-    print("launch.sh file at", cache_dir)
+        print(f"Number of experiments created: {len(jobs)}")
+        print("launch.sh file at", cache_dir)
