@@ -158,7 +158,7 @@ def load_dm(args, patterns = None):
             window_size=args.window_size, window_stride=args.window_stride, normalize=args.normalize, pattern_size=args.pattern_size,
             subjects_for_test=args.subjects_for_test, reduce_train_imbalance=args.reduce_imbalance, 
             label_mode=args.label_mode, mode=args.mode, mtf_bins=args.mtf_bins, n_val_subjects=args.n_val_subjects,
-            skip=(args.window_size - args.overlap) if args.overlap>1 else 1) 
+            skip=(args.window_size - args.overlap) if args.overlap>=0 else 1) 
 
     print(f"Using {len(dm.ds_train)} observations for training, {len(dm.ds_val)} for validation and {len(dm.ds_test)} observations for test")
   

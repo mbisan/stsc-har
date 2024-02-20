@@ -40,6 +40,6 @@ def train_model(
     model = modeltype.load_from_checkpoint(ckpt.best_model_path)
 
     # run the validation with the final weights
-    data = tr.test(model, datamodule=dm)
-
+    data = tr.test(model, datamodule=dm, verbose=False)
+    print(model.cm_last.sum())
     return model, {**data[0], "cm": model.cm_last.tolist(), "path": ckpt.best_model_path}

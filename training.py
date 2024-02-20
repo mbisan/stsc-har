@@ -27,7 +27,8 @@ def main(args):
     if args.mode == "seg":
         model = SegWrapper(
             dm.n_dims, args.encoder_features, dm.n_classes, args.pooling, args.pattern_size, 
-            args.cf, args.lr, args.weight_decayL1, args.weight_decayL2, args.encoder_architecture, modelname, args.overlap)
+            args.cf, args.lr, args.weight_decayL1, args.weight_decayL2, args.encoder_architecture, 
+            modelname, args.overlap if args.overlap>=0 else args.window_size - 1)
         modeltype = SegWrapper
     else:
         model = DFWrapper(
