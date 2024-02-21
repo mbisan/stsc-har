@@ -5,6 +5,8 @@ import numpy as np
 import torch
 from nets.metrics import print_cm, metrics_from_cm
 
+import json
+
 '''
     Usage:
         python log_results.py --dir DIRECTORY --out_name FILENAME
@@ -40,7 +42,10 @@ def main(args):
     for model_name in directories:
         if os.path.exists(os.path.join(args.dir, model_name, args.out_name)):
             with open(os.path.join(args.dir, model_name, args.out_name), "r") as f:
-                loaded[model_name] = eval(f.read())
+                if args.out_name.endswith(".json"):
+                    loaded[model_name] = json.load(f)
+                elif args.out_name.endswith(".dict"):
+                    loaded[model_name] = eval(f.read())
 
     entries = []
     for model_name, entry_dict in loaded.items():
