@@ -56,10 +56,20 @@ def main(args):
     if "cm" in entries:
         print("Compute aggregated Confusion Matrix")
 
-        cm_summed = np.zeros_like(np.array(eval(loaded[list(loaded.keys())[0]]["cm"])))
+        if type(loaded[list(loaded.keys())[0]]["cm"]) == "str":
+            temp = eval(loaded[list(loaded.keys())[0]]["cm"])
+        else:
+            temp = loaded[model_name]["cm"]
+
+        cm_summed = np.zeros_like(np.array(temp))
 
         for model_name in loaded.keys():
-            cm_summed += np.array(eval(loaded[model_name]["cm"]))
+            if type(loaded[model_name]["cm"]) == "str":
+                temp = eval(loaded[model_name]["cm"])
+            else:
+                temp = loaded[model_name]["cm"]
+
+            cm_summed += np.array(temp)
 
         cm_summed = torch.from_numpy(cm_summed)
         print_cm(cm_summed, cm_summed.shape[0])
