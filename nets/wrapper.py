@@ -24,10 +24,10 @@ class DFWrapper(BaseWrapper):
         wdw_len, wdw_str,
         enc_feats, dec_feats, dec_layers, lr, voting, 
         weight_decayL1, weight_decayL2,
-        name="test") -> None:
+        name="test", **kwargs) -> None:
 
         # save parameters as attributes
-        super().__init__(lr, weight_decayL1, weight_decayL2, n_classes), self.__dict__.update(locals())
+        super().__init__(lr, weight_decayL1, weight_decayL2, n_classes, **kwargs), self.__dict__.update(locals())
         self.save_hyperparameters()
 
         # create encoder
@@ -140,10 +140,10 @@ class DFWrapper(BaseWrapper):
 class SegWrapper(BaseWrapper):
 
     def __init__(self, in_channels, latent_features, n_classes, 
-            pooling, kernel_size, complexity_factor, lr, weight_decayL1, weight_decayL2, arch, name=None, overlap=1) -> None:
+            pooling, kernel_size, complexity_factor, lr, weight_decayL1, weight_decayL2, arch, name=None, overlap=1, **kwargs) -> None:
 
         # save parameters as attributes
-        super().__init__(lr, weight_decayL1, weight_decayL2, n_classes), self.__dict__.update(locals())
+        super().__init__(lr, weight_decayL1, weight_decayL2, n_classes, **kwargs), self.__dict__.update(locals())
         self.save_hyperparameters()
 
         if "unet" in arch:
@@ -194,15 +194,15 @@ class ContrastiveWrapper(BaseWrapper):
 
     # following http://arxiv.org/abs/2004.11362 : Supervised Contrastive Learning
 
-    def __init__(self, encoder_arch, in_channels, latent_features, lr, weight_decayL1, weight_decayL2, name=None, window_size=1) -> None:
+    def __init__(self, encoder_arch, in_channels, latent_features, lr, weight_decayL1, weight_decayL2, name=None, window_size=8, **kwargs) -> None:
 
         # save parameters as attributes
-        super().__init__(lr, weight_decayL1, weight_decayL2, 2), self.__dict__.update(locals())
+        super().__init__(lr, weight_decayL1, weight_decayL2, 2, **kwargs), self.__dict__.update(locals())
         self.save_hyperparameters()
 
         self.encoder = encoder_dict[encoder_arch](
             channels=in_channels, ref_size=0, 
-            wdw_size=32, n_feature_maps=latent_features
+            wdw_size=window_size, n_feature_maps=latent_features
         )
 
         self.flatten = nn.Flatten()
@@ -214,10 +214,6 @@ class ContrastiveWrapper(BaseWrapper):
         self.project = decoder_dict["mlp"](inp_feats = latent_features*2, hid_feats = latent_features, out_feats = latent_features, hid_layers = 1)
 
         self.contrastive_loss = SupConLoss()
-
-        self.previous_predictions = None
-        self.repr = []
-        self.labels = []
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.encoder(x) 
@@ -235,7 +231,7 @@ class ContrastiveWrapper(BaseWrapper):
         output = self.forward(batch["series"])
 
         if stage != "train":
-            self.repr.append(output)
+            self.probabilities.append(output)
             self.labels.append(batch["label"])
 
         output_p = self.project(output)
@@ -249,7 +245,7 @@ class ContrastiveWrapper(BaseWrapper):
 
         # return loss
         if stage == "train":
-            return loss.to(torch.float32) + self.regularize
+            return loss.to(torch.float32) + self.regularizer_loss()
 
         return loss.to(torch.float32)
 
@@ -257,7 +253,7 @@ class ContrastiveWrapper(BaseWrapper):
         if stage=="train":
             return
 
-        representations = torch.concatenate(self.repr, dim=0) 
+        representations = torch.concatenate(self.probabilities, dim=0) 
         all_labels = torch.concatenate(self.labels, dim=0)
 
         dissimilarities = []

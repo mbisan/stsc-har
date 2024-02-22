@@ -22,15 +22,15 @@ class BaseWrapper(LightningModule):
         for other metrics re-define log_metrics
     '''
 
-    def __init__(self, lr, weight_decayL1, weight_decayL2, num_classes) -> None:
+    def __init__(self, lr, weight_decayL1, weight_decayL2, num_classes, **kwargs) -> None:
 
         # save parameters as attributes
         super().__init__()
 
         self.lr = lr
         self.dsrc = "ts"
-        self.monitor = "val_re"
-        self.optimizer_mode = "max"
+        self.monitor = kwargs.get("monitor", "val_re")
+        self.optimizer_mode = kwargs.get("optimizer_mode", "max")
         self.previous_predictions = None
         self.probabilities = []
         self.labels = []

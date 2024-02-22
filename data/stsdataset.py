@@ -16,8 +16,6 @@ class StreamingTimeSeriesCopy(Dataset):
             ) -> None:
         super().__init__()
 
-        assert label_mode%2==1
-
         self.stsds = stsds
         self.indices = indices
         self.label_mode = label_mode

@@ -112,7 +112,7 @@ uci_img = {
 wisdm_img = {
     "dataset": "WISDM",
     "subjects_for_test": cross_validate["WISDM"],
-    "window_size": 10,
+    "window_size": 16,
     "window_stride": 2,
     "mode": "img",
     "encoder_architecture": "cnn_gap_img",
@@ -125,7 +125,7 @@ wisdm_img = {
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar"],
-    "pattern_size": 10,
+    "pattern_size": 16,
     "cached": False,
     "rho": 0.1,
 }
@@ -187,4 +187,4 @@ segExperiments = {
     "pattern_size": 5
 }
 
-experiments = [harth_ts, uci_ts, wisdm_ts, harth_img, uci_img, wisdm_img, harth_tr, uci_tr, wisdm_tr]
+experiments = [wisdm_img]

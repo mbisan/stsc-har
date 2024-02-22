@@ -16,6 +16,8 @@ import torch
 from torchvision.transforms import Normalize
 
 def cm_str(cm):
+    if cm is None:
+        return ""
     str_res = "<>[\n"
     for i in range(len(cm)):
         str_res += "    [" + ",".join([f"{cm[i][j]:>6}" for j in range(len(cm[i]))]) + "],\n"
