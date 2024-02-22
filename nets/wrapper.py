@@ -261,7 +261,7 @@ class ContrastiveWrapper(BaseWrapper):
 
         dissimilarities = []
         labels = []
-        for i in range(0, all_labels.shape[0]-self.window_size, self.window_size):
+        for i in range(0, all_labels.shape[0]-self.window_size):
             diff = (representations[i, :] - representations[i+self.window_size, :]).square().sum().sqrt()
             dissimilarities.append(diff)
             labels.append(0 if all_labels[i] == all_labels[i+self.window_size] else 1)
