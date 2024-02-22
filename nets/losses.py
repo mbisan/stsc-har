@@ -133,28 +133,44 @@ class SupConLoss(nn.Module):
     
 class ContrastiveDist(nn.Module):
 
-    def __init__(self, epsilon: float = 1e-6) -> None:
+    def __init__(self, epsilon: float = 1e-6, m: float = 10.0) -> None:
         
         super().__init__()
 
         self.epsilon = epsilon
+        self.M = m
 
     def forward(self, features, labels):
         '''
             features has shape (n, d)
             labels has shape (n)
 
-            Loss is equal to the mean difference between features of the same label 
-            minus the difference between samples of different label
+            for each feature in the batch x_i, with its label y_i,  
+            the elements of the same class are A(i) = {j | y_i = y_j and i!=j}   
 
-            Loss = Sum_ij (1 - 2 * 1(lbl[i] != lbl[j])) || f[i] - f[j] ||
+            The elements of other classes are B(i) = {j | y_i != y_j and i!=j}
+
+            Loss to minimize:
+
+            Sum_i { 
+                ReLu(Mean_{j in A(i)} { dis(x_i, x_j) } // relu ensures that elements less than 0 don't propagate gradients
+                - Mean_{j in B(i)} { dis(x_i, x_j)  + M)}
+            }
         '''
 
+        features = features[labels!=100, :]
+        labels = labels[labels!=100]
+
         diff = features[:, None, :] - features[None, :, :] # shape (n, n, d)
-        ed = diff.square().sum(dim=-1) + self.epsilon
-        ed = ed.sqrt()
+        ed = diff.square().sum(dim=-1) # this matrix contains dis(x_i, x_j)
 
-        minimize = ed * (labels.unsqueeze(0) == labels.unsqueeze(1))
-        maximize = ed * (labels.unsqueeze(0) != labels.unsqueeze(1))
+        equal = (labels.unsqueeze(0) == labels.unsqueeze(1))
+        counts = equal.sum(1, keepdim=True) - 1
+        w = equal/(counts + self.epsilon) - ~equal/(labels.shape[0]-counts-1 + self.epsilon)
+        w[torch.arange(w.shape[0]), torch.arange(w.shape[0])] = 0
 
-        return minimize.mean() - maximize.mean()
+        loss = (w*ed).sum(1) + self.M
+
+        loss_valid = loss[counts.squeeze()!=0]
+
+        return torch.nn.functional.relu(loss_valid).mean()

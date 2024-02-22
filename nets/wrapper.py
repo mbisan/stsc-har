@@ -194,7 +194,8 @@ class ContrastiveWrapper(BaseWrapper):
 
     # following http://arxiv.org/abs/2004.11362 : Supervised Contrastive Learning
 
-    def __init__(self, encoder_arch, in_channels, latent_features, lr, weight_decayL1, weight_decayL2, name=None, window_size=8, **kwargs) -> None:
+    def __init__(self, encoder_arch, in_channels, latent_features, lr, weight_decayL1, weight_decayL2, 
+        name=None, window_size=8, output_regularizer=0.01, **kwargs) -> None:
 
         # save parameters as attributes
         super().__init__(lr, weight_decayL1, weight_decayL2, 2, **kwargs), self.__dict__.update(locals())
@@ -211,16 +212,16 @@ class ContrastiveWrapper(BaseWrapper):
 
         self.encoder_2 = decoder_dict["mlp"](inp_feats = features, hid_feats = latent_features*2, out_feats = latent_features*2, hid_layers = 1)
 
-        self.project = decoder_dict["mlp"](inp_feats = latent_features*2, hid_feats = latent_features, out_feats = latent_features, hid_layers = 1)
+        # self.project = decoder_dict["mlp"](inp_feats = latent_features*2, hid_feats = latent_features, out_feats = latent_features, hid_layers = 1)
 
-        self.contrastive_loss = SupConLoss()
+        self.contrastive_loss = ContrastiveDist(epsilon=1e-6, m=10)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.encoder(x) 
         x = self.flatten(x)
         x = self.encoder_2(x)
         # x must be a (n, d) dimensional matrix
-        x = F.normalize(x, p=2, dim=-1)
+        # x = F.normalize(x, p=2, dim=-1)
         return x # projection module is only used while training
 
     def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
@@ -234,14 +235,16 @@ class ContrastiveWrapper(BaseWrapper):
             self.probabilities.append(output)
             self.labels.append(batch["label"])
 
-        output_p = self.project(output)
-        output_p = F.normalize(output_p, p=2, dim=-1)
+        output_p = output
+        # output_p = self.project(output)
+        # output_p = F.normalize(output_p, p=2, dim=-1)
 
         # Compute the loss and metrics
-        loss = self.contrastive_loss(output_p.unsqueeze(1), labels=batch["label"])
-
+        loss = self.contrastive_loss(output_p, labels=batch["label"])
         # log loss and metrics
         self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
+
+        loss = loss + self.output_regularizer*output_p.square().sum(-1).sqrt().mean()
 
         # return loss
         if stage == "train":
@@ -259,7 +262,7 @@ class ContrastiveWrapper(BaseWrapper):
         dissimilarities = []
         labels = []
         for i in range(0, all_labels.shape[0]-self.window_size, self.window_size):
-            diff = (representations[i, :] * representations[i+self.window_size, :]).sum()
+            diff = (representations[i, :] - representations[i+self.window_size, :]).square().sum().sqrt()
             dissimilarities.append(diff)
             labels.append(0 if all_labels[i] == all_labels[i+self.window_size] else 1)
 
