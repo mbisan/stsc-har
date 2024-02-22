@@ -178,13 +178,64 @@ wisdm_tr = {
     "mtf_bins": 16,
 }
 
-segExperiments = {
-    "mode": "seg",
-    "window_size": 128,
+harth_seg = {
+    "dataset": "HARTH",
+    "subjects_for_test": cross_validate["HARTH"],
+    "window_size": 96,
     "window_stride": 1,
-    "pooling": [[2, 2, 2]],
+    "mode": "seg",
+    "encoder_architecture": "utime",
+    "encoder_features": 12,
+    "decoder_architecture": "-", # not used
+    "decoder_features": 0, # not used
+    "decoder_layers": 0, # not used
+    "max_epochs": 10,
+    "training_dir": "training_harth_seg",
     "cf": 1.5,
-    "pattern_size": 5
+    "pattern_size": 5,
+    "pooling": [[2, 2, 2]],
+    "overlap": 0,
+    "batch_size": 64
 }
 
-experiments = [wisdm_img]
+uci_seg = {
+    "dataset": "UCI-HAR",
+    "subjects_for_test": cross_validate["UCI-HAR"],
+    "window_size": 96,
+    "window_stride": 1,
+    "mode": "seg",
+    "encoder_architecture": "utime",
+    "encoder_features": 12,
+    "decoder_architecture": "-", # not used
+    "decoder_features": 0, # not used
+    "decoder_layers": 0, # not used
+    "max_epochs": 30,
+    "training_dir": "training_uci_seg",
+    "cf": 1.5,
+    "pattern_size": 5,
+    "pooling": [[2, 2, 2]],
+    "overlap": 0,
+    "batch_size": 64
+}
+
+wisdm_seg = {
+    "dataset": "WISDM",
+    "subjects_for_test": cross_validate["WISDM"],
+    "window_size": 48,
+    "window_stride": 1,
+    "mode": "seg",
+    "encoder_architecture": "utime",
+    "encoder_features": 12,
+    "decoder_architecture": "-", # not used
+    "decoder_features": 0, # not used
+    "decoder_layers": 0, # not used
+    "max_epochs": 30,
+    "training_dir": "training_wisdm_seg",
+    "cf": 1.5,
+    "pattern_size": 5,
+    "pooling": [[2, 2, 2]],
+    "overlap": 0,
+    "batch_size": 64
+}
+
+experiments = [uci_seg]
