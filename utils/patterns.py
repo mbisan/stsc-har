@@ -11,7 +11,7 @@ def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
         meds = np.mean(meds, axis=0, keepdims=True)
     elif pattern_type == "noise":
         print("Using gaussian noise...")
-        meds = np.random.randn(np.unique(ds.SCS).shape[0], ds.STS.shape[0], pattern_size)
+        meds = np.random.randn(np.sum(np.unique(ds.SCS)!=100), ds.STS.shape[0], pattern_size)
         print(meds.shape)
     elif pattern_type == "noise_1":
         print("Using gaussian noise...")

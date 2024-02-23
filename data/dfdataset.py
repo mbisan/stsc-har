@@ -192,7 +192,7 @@ class LDFDataset(LightningDataModule):
 
         # gather dataset info   
         self.n_dims = self.dfds.stsds.STS.shape[0]
-        self.n_classes = len(np.unique(self.dfds.stsds.SCS))
+        self.n_classes = np.sum(np.unique(self.dfds.stsds.SCS)!=100).item()
         self.n_patterns = self.dfds.n_patterns
         self.l_patterns = self.dfds.patterns.shape[-1]
 

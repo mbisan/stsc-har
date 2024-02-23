@@ -21,6 +21,13 @@ class StreamingTimeSeriesCopy(Dataset):
         self.label_mode = label_mode
         self.mode = mode
         self.mtf_bins = mtf_bins
+
+        if mode == "clr3":
+            window_id, window_lb = self.stsds.getSameClassWindowIndex()
+
+            self.clr_indices = []
+            for cl in np.unique(window_lb):
+                self.clr_indices.append(window_id[window_lb==cl])
         
     def __len__(self):
         return self.indices.shape[0]
@@ -35,8 +42,18 @@ class StreamingTimeSeriesCopy(Dataset):
             c = torch.mode(c[-self.label_mode:]).values
         else:
             c = c[-1]
-
         
+        if self.mode == "clr3":
+            close_id = np.random.choice(self.clr_indices[c], 1)
+            far_cl = (np.random.choice(len(self.clr_indices) - 1) + c + 1) % len(self.clr_indices)
+            far_id = np.random.choice(self.clr_indices[far_cl], 1)
+
+            close_ts, close_c = self.stsds[close_id]
+            far_ts, far_c = self.stsds[far_id]
+
+            # element 0 and 1 belong to the same class, element 2 belongs to another class
+            return {"series": torch.stack([ts, close_ts, far_ts]), "label": c}
+
         if self.mode == "gasf":
             transformed = gaf_compute(ts, "s", (-1, 1))
             return {"series": ts, "label": c, "transformed": transformed}
@@ -99,7 +116,7 @@ class LSTSDataset(LightningDataModule):
 
         # gather dataset info   
         self.n_dims = self.stsds.STS.shape[0]
-        self.n_classes = len(np.unique(self.stsds.SCS))
+        self.n_classes = np.sum(np.unique(self.stsds.SCS)!=100).item()
         self.n_patterns = self.n_classes
 
         # convert to tensors

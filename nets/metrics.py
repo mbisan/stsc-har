@@ -4,7 +4,7 @@ def metrics_from_cm(cm):
     TP = cm.diag()
     FP = cm.sum(0) - TP
     FN = cm.sum(1) - TP
-    TN = torch.empty(cm.shape[0])
+    TN = torch.empty(cm.shape[0], device=cm.device)
     for i in range(cm.shape[0]):
         TN[i] = cm[:i,:i].sum() + cm[:i,i:].sum() + cm[i:,:i].sum() + cm[i:,i:].sum()
 
