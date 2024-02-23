@@ -157,6 +157,7 @@ class LSTSDataset(LightningDataModule):
             print(f"Sampling {examples_per_epoch} (balanced) observations per epoch.")
             self.train_sampler = WeightedRandomSampler(train_label_weights, int(counts.float().mean().ceil().item()), replacement=True)
 
+        clr_indices = None
         if mode == "clr3":
             window_id, window_lb = self.stsds.getSameClassWindowIndex()
             window_id = window_id
