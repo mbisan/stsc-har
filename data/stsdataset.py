@@ -12,7 +12,7 @@ import pywt
 class StreamingTimeSeriesCopy(Dataset):
 
     def __init__(self,
-            stsds: STSDataset, indices: np.ndarray, label_mode: int = 1, mode: str = None, mtf_bins: int = 30
+            stsds: STSDataset, indices: np.ndarray, label_mode: int = 1, mode: str = None, mtf_bins: int = 30, clr_indices: list[np.ndarray] = None
             ) -> None:
         super().__init__()
 
@@ -21,13 +21,7 @@ class StreamingTimeSeriesCopy(Dataset):
         self.label_mode = label_mode
         self.mode = mode
         self.mtf_bins = mtf_bins
-
-        if mode == "clr3":
-            window_id, window_lb = self.stsds.getSameClassWindowIndex()
-
-            self.clr_indices = []
-            for cl in np.unique(window_lb):
-                self.clr_indices.append(window_id[window_lb==cl])
+        self.clr_indices = clr_indices
         
     def __len__(self):
         return self.indices.shape[0]
@@ -39,15 +33,21 @@ class StreamingTimeSeriesCopy(Dataset):
             return {"series": ts, "scs": c}
 
         if self.label_mode > 1:
-            c = torch.mode(c[-self.label_mode:]).values
+            c_ = torch.mode(c[-self.label_mode:]).values
+
+            if c_==100:
+                c = c[-1]
+            else:
+                c = c_
         else:
             c = c[-1]
         
         if self.mode == "clr3":
-            close_id = np.random.choice(self.clr_indices[c], 1)
+            close_id = np.random.choice(self.clr_indices[c], 1).item()
             far_cl = (np.random.choice(len(self.clr_indices) - 1) + c + 1) % len(self.clr_indices)
-            far_id = np.random.choice(self.clr_indices[far_cl], 1)
+            far_id = np.random.choice(self.clr_indices[far_cl], 1).item()
 
+            print(close_id, far_id)
             close_ts, close_c = self.stsds[close_id]
             far_ts, far_c = self.stsds[far_id]
 
@@ -157,8 +157,22 @@ class LSTSDataset(LightningDataModule):
             print(f"Sampling {examples_per_epoch} (balanced) observations per epoch.")
             self.train_sampler = WeightedRandomSampler(train_label_weights, int(counts.float().mean().ceil().item()), replacement=True)
 
+        if mode == "clr3":
+            window_id, window_lb = self.stsds.getSameClassWindowIndex()
+            window_id = window_id
+            window_lb = window_lb.numpy()
+
+            window_lb = window_lb[data_split["train"](window_id)]
+            window_id = window_id[data_split["train"](window_id)]
+
+            print(window_lb, np.unique(window_lb))
+
+            clr_indices = []
+            for cl in np.unique(window_lb):
+                clr_indices.append(window_id[window_lb==cl])
+
         self.ds_train = StreamingTimeSeriesCopy(
-            self.stsds, train_indices, label_mode, mode, mtf_bins)
+            self.stsds, train_indices, label_mode, mode, mtf_bins, clr_indices)
         self.ds_test = StreamingTimeSeriesCopy(self.stsds, test_indices, label_mode, mode, mtf_bins)
         self.ds_val = StreamingTimeSeriesCopy(self.stsds, val_indices, label_mode, mode, mtf_bins)
         
