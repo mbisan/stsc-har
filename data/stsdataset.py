@@ -143,7 +143,7 @@ class LSTSDataset(LightningDataModule):
 
             # add change points to the training indices (a change point up to 2/3 of the leading points in the time series)
             train_changePoints = self.stsds.getChangePointIndex()
-            train_changePoints = np.tile(train_changePoints, (int(2*self.wdw_len/3), 1))
+            train_changePoints = np.tile(train_changePoints, (int(2*self.wdw_len/3), 1)) + int(self.wdw_len/3)
             for i in range(train_changePoints.shape[0]):
                 train_changePoints[i, :] += i
 
