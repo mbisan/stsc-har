@@ -174,3 +174,35 @@ class ContrastiveDist(nn.Module):
         loss_valid = loss[counts.squeeze()!=0]
 
         return torch.nn.functional.relu(loss_valid).mean()
+
+class TripletLoss(nn.Module):
+
+    def __init__(self, epsilon: float = 1e-6, m: float = 2.0) -> None:
+        
+        super().__init__()
+
+        self.epsilon = epsilon
+        self.M = m
+
+    def forward(self, features, labels):
+        '''
+            features has shape (n, 3, d)
+            labels has shape (n) (not used)
+
+            Loss to minimize:
+
+            Mean_i { 
+                ReLu( dis(x_i_0, x_i_1) // relu ensures that elements less than 0 don't propagate gradients
+                - dis(x_i_0, x_i_2)  + M)
+            }
+        '''
+
+        if len(features.shape) == 2:
+            return 0
+
+        maximize = (features[:, 0, :] - features[:, 1, :]).square().sum(dim=-1) # shape n
+        minimize = (features[:, 0, :] - features[:, 2, :]).square().sum(dim=-1) # shape n
+
+        loss_parts = (maximize + self.epsilon).sqrt() - (minimize + self.epsilon).sqrt() + self.M
+
+        return torch.nn.functional.relu(loss_parts).mean()

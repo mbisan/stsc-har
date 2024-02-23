@@ -26,7 +26,7 @@ def main(args):
     model = ContrastiveWrapper(
         args.encoder_architecture, dm.n_dims, args.encoder_features, 
         args.lr, args.weight_decayL1, args.weight_decayL2, modelname, window_size=args.window_size, 
-        output_regularizer=args.cf, monitor="val_aupr")
+        output_regularizer=args.cf, mode=args.mode, monitor="val_aupr")
     
     print("\n" + "Start training:")
     model, data = train_model(dm, model, max_epochs=args.max_epochs, pl_kwargs={

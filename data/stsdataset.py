@@ -42,12 +42,11 @@ class StreamingTimeSeriesCopy(Dataset):
         else:
             c = c[-1]
         
-        if self.mode == "clr3":
+        if self.mode == "clr3" and not self.clr_indices is None:
             close_id = np.random.choice(self.clr_indices[c], 1).item()
             far_cl = (np.random.choice(len(self.clr_indices) - 1) + c + 1) % len(self.clr_indices)
             far_id = np.random.choice(self.clr_indices[far_cl], 1).item()
 
-            print(close_id, far_id)
             close_ts, close_c = self.stsds[close_id]
             far_ts, far_c = self.stsds[far_id]
 
