@@ -3,17 +3,19 @@ import os
 from utils.arguments import get_model_name, get_command
 from experiment_definition import experiments, baseArguments
 
-def create_jobs(args):
-    modelname = get_model_name(args)
+def create_jobs(args_list):
+    modelname = get_model_name(args_list[0])
     modelname_clean = modelname.replace("|", "_")
     modelname_clean = modelname_clean.replace(",", "_")
 
-    return modelname, modelname_clean, f'''#!/bin/bash
+    jobname = f"{args_list[0].mode}_{args_list[0].dataset}"
+
+    job = f'''#!/bin/bash
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task={args.cpus}
-#SBATCH --mem={args.ram}GB
+#SBATCH --cpus-per-task={args_list[0].cpus}
+#SBATCH --mem={args_list[0].ram}GB
 #SBATCH --time=1-00:00:00
 #SBATCH --job-name={modelname_clean}
 #SBATCH --output=O-%x.%j.out
@@ -23,9 +25,11 @@ cd $HOME/stsc-har
 
 source $HOME/.bashrc
 source activate dev2
-
-python {args.command} {get_command(args)}
 '''
+    for args in args_list:
+        job += f"\npython {args.command} {get_command(args)}"
+
+    return modelname, jobname, job
 
 class EmptyExperiment:
     pass
@@ -75,10 +79,12 @@ def produce_experiments(args):
 
     print("Saving experiments to", cache_dir)
 
-    for exp_arg in experiment_arguments:
-        modelname, jobname, job = create_jobs(exp_arg)
-        jobs.append("sbatch " + jobname + ".job")
-        with open(os.path.join(cache_dir, jobname + ".job"), "w") as f:
+    EXPS_PER_JOB = 4
+    for i in range(0, len(experiment_arguments), EXPS_PER_JOB):
+        modelname, jobname, job = create_jobs(experiment_arguments[i:min(i+EXPS_PER_JOB, len(experiment_arguments))])
+        jobname += f"{i}.job"
+        jobs.append("sbatch " + jobname)
+        with open(os.path.join(cache_dir, jobname), "w") as f:
             f.write(job)
 
     print("Created", len(jobs), "jobs")

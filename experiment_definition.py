@@ -33,7 +33,7 @@ harth_ts = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 10,
-    "training_dir": "training_harth_ts",
+    "training_dir": "_harth_ts",
 }
 
 uci_ts = {
@@ -48,7 +48,7 @@ uci_ts = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 30,
-    "training_dir": "training_uci_ts_2",
+    "training_dir": "_uci_ts",
 }
 
 wisdm_ts = {
@@ -63,10 +63,32 @@ wisdm_ts = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 30,
-    "training_dir": "training_wisdm_ts",
+    "training_dir": "_wisdm_ts",
 }
 
 harth_img = {
+    "dataset": "HARTH",
+    "subjects_for_test": cross_validate["HARTH"],
+    "window_size": 25,
+    "window_stride": 2,
+    "mode": "img",
+    "encoder_architecture": "cnn_gap_img",
+    "encoder_features": 24,
+    "decoder_architecture": "mlp",
+    "decoder_features": 32,
+    "decoder_layers": 1,
+    "max_epochs": 10,
+    "training_dir": "_harth_img",
+    "num_medoids": 1,
+    "compute_n": 300,
+    "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar"],
+    "pattern_size": 25,
+    "cached": False,
+    "rho": 0.1,
+    "ram": 24
+}
+
+harth_img_g = {
     "dataset": "HARTH_g",
     "subjects_for_test": cross_validate["HARTH"],
     "window_size": 25,
@@ -78,10 +100,10 @@ harth_img = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 10,
-    "training_dir": "training_harth_img",
+    "training_dir": "_harth_img_g",
     "num_medoids": 1,
     "compute_n": 300,
-    "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar"],
+    "pattern_type": ["med", "fftcoef"],
     "pattern_size": 25,
     "cached": False,
     "rho": 0.1,
@@ -100,7 +122,7 @@ uci_img = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 30,
-    "training_dir": "training_uci_img_2",
+    "training_dir": "_uci_img",
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar", "noise"],
@@ -121,7 +143,7 @@ wisdm_img = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 30,
-    "training_dir": "training_wisdm_img",
+    "training_dir": "_wisdm_img",
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar"],
@@ -142,7 +164,7 @@ harth_tr = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 10,
-    "training_dir": "training_harth_tr",
+    "training_dir": "_harth_tr",
     "mtf_bins": 16,
 }
 
@@ -158,7 +180,7 @@ uci_tr = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 30,
-    "training_dir": "training_uci_tr_2",
+    "training_dir": "_uci_tr",
     "mtf_bins": 16,
 }
 
@@ -174,8 +196,8 @@ wisdm_tr = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 30,
-    "training_dir": "training_wisdm_tr",
-    "mtf_bins": 16,
+    "training_dir": "_wisdm_tr",
+    "mtf_bins": 8,
 }
 
 harth_seg = {
@@ -190,7 +212,7 @@ harth_seg = {
     "decoder_features": 0, # not used
     "decoder_layers": 0, # not used
     "max_epochs": 10,
-    "training_dir": "training_harth_seg_s2",
+    "training_dir": "_harth_seg",
     "cf": 1.5,
     "pattern_size": 3,
     "pooling": [[2, 2, 2]],
@@ -201,7 +223,7 @@ harth_seg = {
 uci_seg = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": 96,
+    "window_size": 120,
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
@@ -210,9 +232,9 @@ uci_seg = {
     "decoder_features": 0, # not used
     "decoder_layers": 0, # not used
     "max_epochs": 30,
-    "training_dir": "training_uci_seg_sampling",
-    "cf": 1.2,
-    "pattern_size": 5,
+    "training_dir": "_uci_seg",
+    "cf": 1.5,
+    "pattern_size": 3,
     "pooling": [[2, 2, 2]],
     "overlap": 0,
     "batch_size": 64
@@ -230,12 +252,12 @@ wisdm_seg = {
     "decoder_features": 0, # not used
     "decoder_layers": 0, # not used
     "max_epochs": 30,
-    "training_dir": "training_wisdm_seg_sampling",
-    "cf": 1.2,
-    "pattern_size": 5,
+    "training_dir": "_wisdm_seg",
+    "cf": 1.5,
+    "pattern_size": 3,
     "pooling": [[2, 2, 2]],
     "overlap": 0,
     "batch_size": 64
 }
 
-experiments = [harth_seg]
+experiments = [harth_ts, harth_img, harth_tr, harth_seg, harth_img_g]

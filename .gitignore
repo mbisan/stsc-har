@@ -7,5 +7,6 @@ cache*
 lightning_logs
 training/*
 training_*
+_*
 
 test*
