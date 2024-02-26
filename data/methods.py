@@ -17,14 +17,14 @@ def reduce_imbalance(train_indices, stsds: STSDataset, train_split, include_chan
 
     examples_per_epoch = int(np.mean(counts))
 
-    # add change points to the training indices (a change point up to 2/3 of the leading points in the time series)
+    # add change points to the training indices (a change point from 1/3 up to 2/3 of the leading points in the time series)
     if include_change_points:
         train_changePoints = stsds.getChangePointIndex()
-        train_changePoints = np.tile(train_changePoints, (int(2*stsds.wsize/3), 1)) + int(stsds.wsize/3)
+        train_changePoints = np.tile(train_changePoints, (int(stsds.wsize/3), 1)) + int(stsds.wsize/3)
         for i in range(train_changePoints.shape[0]):
             train_changePoints[i, :] += i
 
-        train_changePoints = train_changePoints[train_split(train_changePoints)]
+        train_changePoints = np.intersect1d(train_indices, train_changePoints)
 
         train_indices = np.concatenate([train_indices, train_changePoints])
         train_label_weights = np.concatenate(
