@@ -98,7 +98,9 @@ class LSTSDataset(LightningDataModule):
             label_mode: int = 1,
             mode: str = None,
             mtf_bins: int = 50,
-            skip: int = 1
+            skip: int = 1,
+            same_class: bool = False,
+            change_points: bool = True
             ) -> None:
 
         # save parameters as attributes
@@ -122,13 +124,17 @@ class LSTSDataset(LightningDataModule):
 
         total_observations = self.stsds.indices.shape[0]
         train_indices = np.arange(total_observations)[data_split["train"](self.stsds.indices)]
+
+        if same_class:
+            train_indices = np.intersect1d(train_indices, self.stsds.getSameClassWindowIndex()[0])
+
         test_indices = np.arange(total_observations)[data_split["test"](self.stsds.indices)][::skip]
         val_indices = np.arange(total_observations)[data_split["val"](self.stsds.indices)][::skip]
 
         self.reduce_train_imbalance = reduce_train_imbalance
 
         if reduce_train_imbalance:
-            train_indices, train_sampler = reduce_imbalance(train_indices, self.stsds, data_split["train"])
+            train_indices, train_sampler = reduce_imbalance(train_indices, self.stsds, data_split["train"], include_change_points=change_points)
             self.train_sampler = train_sampler
 
         clr_indices = None

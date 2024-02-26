@@ -165,6 +165,8 @@ class LDFDataset(LightningDataModule):
             num_workers: int = mp.cpu_count()//2,
             reduce_train_imbalance: bool = False,
             label_mode: int = 1,
+            same_class: bool = False,
+            change_points: bool = True
             ) -> None:
 
         '''
@@ -198,12 +200,18 @@ class LDFDataset(LightningDataModule):
 
         total_observations = self.dfds.stsds.indices.shape[0]
         train_indices = np.arange(total_observations)[data_split["train"](self.dfds.stsds.indices)]
+
+        if same_class: 
+            # note that if same class is true and change points too, 
+            # change points are not included, as change points are inside windows with multiple classes
+            train_indices = np.intersect1d(train_indices, self.dfds.stsds.getSameClassWindowIndex()[0])
+
         test_indices = np.arange(total_observations)[data_split["test"](self.dfds.stsds.indices)]
         val_indices = np.arange(total_observations)[data_split["val"](self.dfds.stsds.indices)]
 
         self.reduce_train_imbalance = reduce_train_imbalance
         if reduce_train_imbalance:
-            train_indices, train_sampler = reduce_imbalance(train_indices, self.dfds.stsds, data_split["train"])
+            train_indices, train_sampler = reduce_imbalance(train_indices, self.dfds.stsds, data_split["train"], include_change_points=change_points)
             self.train_sampler = train_sampler
 
         self.dfds.stsds.toTensor()

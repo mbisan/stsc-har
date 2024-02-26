@@ -69,7 +69,8 @@ def load_dmdataset(
         # overlap = -1,
         n_val_subjects = 1,
         cached = True,
-        patterns = None):
+        patterns = None,
+        same_class = False):
 
     actual_window_size = window_size
     if pattern_size > window_size:
@@ -108,7 +109,8 @@ def load_dmdataset(
         dfds.dm_transform = dm_transform
 
     dm = LDFDataset(dfds, data_split=data_split, batch_size=batch_size, random_seed=42, 
-        num_workers=num_workers, reduce_train_imbalance=reduce_train_imbalance, label_mode=label_mode) #, overlap=overlap)
+        num_workers=num_workers, reduce_train_imbalance=reduce_train_imbalance, label_mode=label_mode,
+        same_class=same_class) #, overlap=overlap)
 
     return dm
 
@@ -129,7 +131,8 @@ def load_tsdataset(
         mode = None,
         mtf_bins = 50,
         n_val_subjects = 1,
-        skip = 1):
+        skip = 1,
+        same_class = False):
     
     ds = load_dataset(dataset_name, dataset_home_directory, window_size, window_stride, normalize)
         
@@ -138,7 +141,8 @@ def load_tsdataset(
     data_split = split_by_test_subject(ds, subjects_for_test, n_val_subjects)
 
     dm = LSTSDataset(ds, data_split=data_split, batch_size=batch_size, random_seed=42, 
-        num_workers=num_workers, reduce_train_imbalance=reduce_train_imbalance, label_mode=label_mode, mode=mode, mtf_bins=mtf_bins, skip=skip) # overlap=overlap, 
+        num_workers=num_workers, reduce_train_imbalance=reduce_train_imbalance, 
+        label_mode=label_mode, mode=mode, mtf_bins=mtf_bins, skip=skip, same_class=same_class) # overlap=overlap, 
     dm.l_patterns = pattern_size
 
     return dm
@@ -152,7 +156,7 @@ def load_dm(args, patterns = None):
             window_size=args.window_size, window_stride=args.window_stride, normalize=args.normalize, pattern_size=args.pattern_size, 
             compute_n=args.compute_n, subjects_for_test=args.subjects_for_test, reduce_train_imbalance=args.reduce_imbalance, 
             label_mode=args.label_mode, num_medoids=args.num_medoids, pattern_type=args.pattern_type, # overlap=args.overlap, 
-            n_val_subjects=args.n_val_subjects, cached=args.cached, patterns=patterns)
+            n_val_subjects=args.n_val_subjects, cached=args.cached, patterns=patterns, same_class=args.same_class)
     else:
         dm = load_tsdataset(
             args.dataset, dataset_home_directory=args.dataset_dir, 
@@ -160,7 +164,7 @@ def load_dm(args, patterns = None):
             window_size=args.window_size, window_stride=args.window_stride, normalize=args.normalize, pattern_size=args.pattern_size,
             subjects_for_test=args.subjects_for_test, reduce_train_imbalance=args.reduce_imbalance, 
             label_mode=args.label_mode, mode=args.mode, mtf_bins=args.mtf_bins, n_val_subjects=args.n_val_subjects,
-            skip=(args.window_size - args.overlap) if args.overlap>=0 else 1) 
+            skip=(args.window_size - args.overlap) if args.overlap>=0 else 1, same_class=args.same_class) 
 
     print(f"Using {len(dm.ds_train)} observations for training, {len(dm.ds_val)} for validation and {len(dm.ds_test)} observations for test")
   
