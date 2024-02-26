@@ -20,7 +20,7 @@ def train_model(
     ckpt = ModelCheckpoint(
         monitor=metrics['target'], 
         mode=metrics["mode"],
-        save_top_k=-1,
+        save_top_k=3,
         filename='{epoch}-{step}-{val_re:.4f}'
     )
 

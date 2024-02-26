@@ -260,4 +260,6 @@ wisdm_seg = {
     "batch_size": 64
 }
 
-experiments = [harth_ts, harth_img, harth_tr, harth_seg, harth_img_g]
+experiments = [harth_ts, harth_img, harth_tr, harth_seg, harth_img_g, 
+               uci_ts, uci_img, uci_tr, uci_seg, 
+               wisdm_ts, wisdm_img, wisdm_tr, wisdm_seg]
