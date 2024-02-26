@@ -110,8 +110,8 @@ class STSDataset(Dataset):
     def getIndicesByClass(self, data_split = lambda x: x > 0):
             window_id, window_lb = self.getSameClassWindowIndex()
 
-            window_lb = window_lb[data_split["train"](window_id)]
-            window_id = window_id[data_split["train"](window_id)]
+            window_lb = window_lb[data_split(window_id)]
+            window_id = window_id[data_split(window_id)]
 
             clr_indices = []
             for cl in np.unique(window_lb):
