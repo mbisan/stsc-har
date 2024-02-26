@@ -48,7 +48,7 @@ uci_ts = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 30,
-    "training_dir": "training_uci_ts",
+    "training_dir": "training_uci_ts_2",
 }
 
 wisdm_ts = {
@@ -100,10 +100,10 @@ uci_img = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 30,
-    "training_dir": "training_uci_img",
+    "training_dir": "training_uci_img_2",
     "num_medoids": 1,
     "compute_n": 300,
-    "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar"],
+    "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar", "noise"],
     "pattern_size": 25,
     "cached": False,
     "rho": 0.1,
@@ -158,7 +158,7 @@ uci_tr = {
     "decoder_features": 32,
     "decoder_layers": 1,
     "max_epochs": 30,
-    "training_dir": "training_uci_tr",
+    "training_dir": "training_uci_tr_2",
     "mtf_bins": 16,
 }
 
@@ -181,7 +181,7 @@ wisdm_tr = {
 harth_seg = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 96,
+    "window_size": 120,
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
@@ -190,9 +190,9 @@ harth_seg = {
     "decoder_features": 0, # not used
     "decoder_layers": 0, # not used
     "max_epochs": 10,
-    "training_dir": "training_harth_seg",
+    "training_dir": "training_harth_seg_s2",
     "cf": 1.5,
-    "pattern_size": 5,
+    "pattern_size": 3,
     "pooling": [[2, 2, 2]],
     "overlap": 0,
     "batch_size": 64
@@ -205,13 +205,13 @@ uci_seg = {
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
-    "encoder_features": 12,
+    "encoder_features": 10,
     "decoder_architecture": "-", # not used
     "decoder_features": 0, # not used
     "decoder_layers": 0, # not used
     "max_epochs": 30,
-    "training_dir": "training_uci_seg",
-    "cf": 1.5,
+    "training_dir": "training_uci_seg_sampling",
+    "cf": 1.2,
     "pattern_size": 5,
     "pooling": [[2, 2, 2]],
     "overlap": 0,
@@ -225,17 +225,17 @@ wisdm_seg = {
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
-    "encoder_features": 12,
+    "encoder_features": 16,
     "decoder_architecture": "-", # not used
     "decoder_features": 0, # not used
     "decoder_layers": 0, # not used
     "max_epochs": 30,
-    "training_dir": "training_wisdm_seg",
-    "cf": 1.5,
+    "training_dir": "training_wisdm_seg_sampling",
+    "cf": 1.2,
     "pattern_size": 5,
     "pooling": [[2, 2, 2]],
     "overlap": 0,
     "batch_size": 64
 }
 
-experiments = [uci_seg]
+experiments = [harth_seg]
