@@ -26,9 +26,10 @@ def reduce_imbalance(train_indices, stsds: STSDataset, train_split, include_chan
 
         train_changePoints = np.intersect1d(train_indices, train_changePoints)
 
-        train_indices = np.concatenate([train_indices, train_changePoints])
-        train_label_weights = np.concatenate(
-            [train_label_weights, np.full_like(train_changePoints, 1/train_changePoints.shape[0])])
+        if train_changePoints.shape[0] > 0:
+            train_indices = np.concatenate([train_indices, train_changePoints])
+            train_label_weights = np.concatenate(
+                [train_label_weights, np.full_like(train_changePoints, 1/train_changePoints.shape[0])])
 
     print(f"Sampling {examples_per_epoch} (balanced) observations per epoch.")
     train_sampler = WeightedRandomSampler(train_label_weights, examples_per_epoch, replacement=True)
