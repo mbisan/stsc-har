@@ -15,7 +15,7 @@ from transforms.dtw import dtw_mode
 
 from nets.losses import SupConLoss, ContrastiveDist, TripletLoss
 
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve, auc
 
 class DFWrapper(BaseWrapper):
 
@@ -214,9 +214,9 @@ class ContrastiveWrapper(BaseWrapper):
         # self.project = decoder_dict["mlp"](inp_feats = latent_features*2, hid_feats = latent_features, out_feats = latent_features, hid_layers = 1)
 
         if mode == "clr3":
-            self.contrastive_loss = TripletLoss(epsilon=1e-6, m=2.0)
+            self.contrastive_loss = TripletLoss(epsilon=1e-6, m=5.0)
         elif mode == "clr":
-            self.contrastive_loss = ContrastiveDist(epsilon=1e-6, m=2.0)
+            self.contrastive_loss = ContrastiveDist(epsilon=1e-6, m=5.0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.encoder(x) 
@@ -271,7 +271,15 @@ class ContrastiveWrapper(BaseWrapper):
         labels = labels.cpu().numpy()
 
         try:
-            auroc = roc_auc_score(labels, dissimilarities)
+            fpr, tpr, thresholds = roc_curve(labels, dissimilarities)
+            auroc = auc(fpr, tpr)
+
+            for i, tpr_ in enumerate(tpr):
+                if tpr_ > 0.95:
+                    self.log(f"{stage}_fpr95", fpr[i], on_epoch=True, on_step=False, prog_bar=False, logger=True)
+                    self.log(f"{stage}_th", thresholds[i], on_epoch=True, on_step=False, prog_bar=False, logger=True)
+                    break
+
             aupr = average_precision_score(labels, dissimilarities)
         except:
             auroc = 0

@@ -66,7 +66,7 @@ def main(args):
         }, modeltype=modeltype)
     
     data = {**data, "args": args.__dict__, "name": modelname}
-    data["cm"] = cm_str(data["cm"])
+    data["cm"] = cm_str(data["cm"]) if len(data["cm"]) > 0 else None
     data = json.dumps(data, indent=2).replace("<>]\"", "]").replace("\"<>", "").replace("\\n", "\n")
     with open(os.path.join(args.training_dir, modeldir, "results.json"), "w") as f:
         f.write(data)
