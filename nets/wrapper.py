@@ -232,28 +232,23 @@ class ContrastiveWrapper(BaseWrapper):
         """ Inner step for the training, validation and testing. """
 
         # Forward pass
-        reshape = False
-        if len(batch["series"].shape) == 4:
-            reshape = True
-            batch["series"] = batch["series"].view(-1, batch["series"].shape[-2], batch["series"].shape[-1])
-        output = self.forward(batch["series"])
+        if stage == "train":
+            output = self.forward(batch["triplet"].view(-1, batch["triplet"].shape[-2], batch["triplet"].shape[-1]))
+            output = output.view(-1, 3, output.shape[-1])
+        else:
+            output = self.forward(batch["series"])
 
         if stage != "train":
             self.probabilities.append(output)
             self.labels.append(batch["label"])
 
-        if reshape:
-            output_p = output.view(-1, 3, output.shape[-1])
-        else:
-            output_p = output
-
         # Compute the loss and metrics
-        loss = self.contrastive_loss(output_p, labels=batch["label"])
+        loss = self.contrastive_loss(output, labels=batch["label"])
 
         # log loss and metrics
         self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
 
-        loss = loss + self.output_regularizer*output_p.square().sum(-1).sqrt().mean()
+        loss = loss + self.output_regularizer*output.square().sum(-1).sqrt().mean()
 
         # return loss
         if stage == "train":

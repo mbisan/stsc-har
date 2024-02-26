@@ -6,7 +6,7 @@ from utils.methods import train_model
 
 from utils.arguments import get_parser, get_model_name
 
-from nets.wrapper import DFWrapper, SegWrapper
+from nets.wrapper import DFWrapper, SegWrapper, ContrastiveWrapper
 
 from pytorch_lightning import seed_everything
 import numpy as np
@@ -28,8 +28,14 @@ def main(args):
         model = SegWrapper(
             dm.n_dims, args.encoder_features, dm.n_classes, args.pooling, args.pattern_size, 
             args.cf, args.lr, args.weight_decayL1, args.weight_decayL2, args.encoder_architecture, 
-            modelname, args.overlap if args.overlap>=0 else args.window_size - 1)
+            modelname, args.overlap if args.overlap>=0 else args.window_size - 1, monitor="val_re")
         modeltype = SegWrapper
+    if "clr" in args.mode:
+        model = ContrastiveWrapper(
+            args.encoder_architecture, dm.n_dims, args.encoder_features, 
+            args.lr, args.weight_decayL1, args.weight_decayL2, modelname, window_size=args.window_size, 
+            output_regularizer=args.cf, mode=args.mode, monitor="val_aupr")
+        modeltype = ContrastiveWrapper
     else:
         model = DFWrapper(
             args.mode,
@@ -37,7 +43,7 @@ def main(args):
             dm.n_dims, dm.n_classes, dm.n_patterns, dm.l_patterns, dm.wdw_len, dm.wdw_str, 
             args.encoder_features, args.decoder_features, args.decoder_layers,
             args.lr, {"n": args.voting, "rho": args.rho}, 
-            args.weight_decayL1, args.weight_decayL2, modelname)
+            args.weight_decayL1, args.weight_decayL2, modelname, monitor="val_re")
         modeltype = DFWrapper
 
     # save computed patterns for later use
@@ -56,7 +62,7 @@ def main(args):
             "seed": 42
         }, 
         metrics={
-            "target": "val_re", "mode": "max"
+            "target": model.monitor, "mode": "max"
         }, modeltype=modeltype)
     
     data = {**data, "args": args.__dict__, "name": modelname}

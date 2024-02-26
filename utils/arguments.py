@@ -73,6 +73,8 @@ def get_parser():
         help="Pooling in each layer of utime")
     parser.add_argument("--cf", default=1, type=float,
         help="Complexity factor of utime")
+    parser.add_argument("--same_class", action="store_true", 
+        help="Same class windows only for training")
 
     return parser
 

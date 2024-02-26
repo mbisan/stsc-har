@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from torch.utils.data import Dataset
 
@@ -61,6 +62,7 @@ class STSDataset(Dataset):
         return return_sts, return_scs
     
     def getSameClassWindowIndex(self, return_mask=False):
+        # returns array with positions in the indices with same class windows
         diff = np.diff(self.SCS)
         ids = np.concatenate(([0], np.nonzero(diff)[0], [self.SCS.shape[0]]))
 
@@ -81,6 +83,7 @@ class STSDataset(Dataset):
         return sameClassWindowIndex, self.SCS[self.indices[sameClassWindowIndex]]
     
     def getChangePointIndex(self):
+        # returns array with positions in the indices with change points
         diff = np.diff(self.SCS)
         ids = np.nonzero(diff)[0]
 
@@ -97,6 +100,24 @@ class STSDataset(Dataset):
         self.std = np.expand_dims(np.std(self.STS, axis=1), 1)
 
         self.STS = (self.STS - self.mean) / self.std
+
+    def toTensor(self):
+        if not torch.is_tensor(self.STS):
+            self.STS = torch.from_numpy(self.STS).to(torch.float32)
+        if not torch.is_tensor(self.SCS):
+            self.SCS = torch.from_numpy(self.SCS).to(torch.int64)
+
+    def getIndicesByClass(self, data_split = lambda x: x > 0):
+            window_id, window_lb = self.getSameClassWindowIndex()
+
+            window_lb = window_lb[data_split["train"](window_id)]
+            window_id = window_id[data_split["train"](window_id)]
+
+            clr_indices = []
+            for cl in np.unique(window_lb):
+                clr_indices.append(window_id[window_lb==cl])
+
+            return clr_indices
 
 class StreamingTimeSeries(STSDataset):
 

@@ -13,6 +13,8 @@ from data.base import STSDataset
 
 import hashlib
 
+from data.methods import reduce_imbalance
+
 class DFDataset(Dataset):
     def __init__(self, 
             stsds: STSDataset = None,
@@ -130,8 +132,6 @@ class DFDatasetCopy(Dataset):
             dfds: DFDataset, indices: np.ndarray, label_mode: int = 1) -> None:
         super().__init__()
 
-        assert label_mode%2==1
-
         self.dfds = dfds
         self.indices = indices
         self.label_mode = label_mode
@@ -196,43 +196,17 @@ class LDFDataset(LightningDataModule):
         self.n_patterns = self.dfds.n_patterns
         self.l_patterns = self.dfds.patterns.shape[-1]
 
-        # convert to tensors
-        if not torch.is_tensor(self.dfds.stsds.STS):
-            self.dfds.stsds.STS = torch.from_numpy(self.dfds.stsds.STS).to(torch.float32)
-        if not torch.is_tensor(self.dfds.stsds.SCS):
-            self.dfds.stsds.SCS = torch.from_numpy(self.dfds.stsds.SCS).to(torch.int64)
-
         total_observations = self.dfds.stsds.indices.shape[0]
         train_indices = np.arange(total_observations)[data_split["train"](self.dfds.stsds.indices)]
         test_indices = np.arange(total_observations)[data_split["test"](self.dfds.stsds.indices)]
         val_indices = np.arange(total_observations)[data_split["val"](self.dfds.stsds.indices)]
 
         self.reduce_train_imbalance = reduce_train_imbalance
-
         if reduce_train_imbalance:
-            train_labels = self.dfds.stsds.SCS[self.dfds.stsds.indices[train_indices]]
-            train_label_weights = np.empty_like(train_labels, dtype=np.float32)
+            train_indices, train_sampler = reduce_imbalance(train_indices, self.dfds.stsds, data_split["train"])
+            self.train_sampler = train_sampler
 
-            cl, counts = torch.unique(train_labels, return_counts=True)
-            for i in range(cl.shape[0]):
-                train_label_weights[train_labels == cl[i]] = 1 / counts[i]
-
-            examples_per_epoch = int(counts.float().mean().ceil().item())
-
-            # add change points to the training indices (a change point up to 2/3 of the leading points in the time series)
-            train_changePoints = self.dfds.stsds.getChangePointIndex()
-            train_changePoints = np.tile(train_changePoints, (int(2*self.wdw_len/3), 1))
-            for i in range(train_changePoints.shape[0]):
-                train_changePoints[i, :] += i
-
-            train_changePoints = train_changePoints[data_split["train"](train_changePoints)]
-
-            train_indices = torch.cat([torch.from_numpy(train_indices), torch.from_numpy(train_changePoints)])
-            train_label_weights = torch.cat(
-                [torch.from_numpy(train_label_weights), torch.full_like(torch.from_numpy(train_changePoints), 1/train_changePoints.shape[0])])
-
-            print(f"Sampling {examples_per_epoch} (balanced) observations per epoch.")
-            self.train_sampler = WeightedRandomSampler(train_label_weights, int(counts.float().mean().ceil().item()), replacement=True)
+        self.dfds.stsds.toTensor()
 
         self.ds_train = DFDatasetCopy(self.dfds, train_indices, label_mode)
         self.ds_test = DFDatasetCopy(self.dfds, test_indices, label_mode)

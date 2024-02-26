@@ -9,6 +9,8 @@ from data.base import STSDataset
 from transforms.gaf_mtf import mtf_compute, gaf_compute
 import pywt
 
+from data.methods import reduce_imbalance
+
 class StreamingTimeSeriesCopy(Dataset):
 
     def __init__(self,
@@ -51,7 +53,7 @@ class StreamingTimeSeriesCopy(Dataset):
             far_ts, far_c = self.stsds[far_id]
 
             # element 0 and 1 belong to the same class, element 2 belongs to another class
-            return {"series": torch.stack([ts, close_ts, far_ts]), "label": c}
+            return {"series": ts, "label": c, "triplet": torch.stack([ts, close_ts, far_ts])}
 
         if self.mode == "gasf":
             transformed = gaf_compute(ts, "s", (-1, 1))
@@ -118,12 +120,6 @@ class LSTSDataset(LightningDataModule):
         self.n_classes = np.sum(np.unique(self.stsds.SCS)!=100).item()
         self.n_patterns = self.n_classes
 
-        # convert to tensors
-        if not torch.is_tensor(self.stsds.STS):
-            self.stsds.STS = torch.from_numpy(self.stsds.STS).to(torch.float32)
-        if not torch.is_tensor(self.stsds.SCS):
-            self.stsds.SCS = torch.from_numpy(self.stsds.SCS).to(torch.int64)
-
         total_observations = self.stsds.indices.shape[0]
         train_indices = np.arange(total_observations)[data_split["train"](self.stsds.indices)]
         test_indices = np.arange(total_observations)[data_split["test"](self.stsds.indices)][::skip]
@@ -132,44 +128,14 @@ class LSTSDataset(LightningDataModule):
         self.reduce_train_imbalance = reduce_train_imbalance
 
         if reduce_train_imbalance:
-            train_labels = self.stsds.SCS[self.stsds.indices[train_indices]]
-            train_label_weights = np.empty_like(train_labels, dtype=np.float32)
-
-            cl, counts = torch.unique(train_labels, return_counts=True)
-            for i in range(cl.shape[0]):
-                train_label_weights[train_labels == cl[i]] = 1 / counts[i]
-
-            examples_per_epoch = int(counts.float().mean().ceil().item())
-
-            # add change points to the training indices (a change point up to 2/3 of the leading points in the time series)
-            train_changePoints = self.stsds.getChangePointIndex()
-            train_changePoints = np.tile(train_changePoints, (int(2*self.wdw_len/3), 1)) + int(self.wdw_len/3)
-            for i in range(train_changePoints.shape[0]):
-                train_changePoints[i, :] += i
-
-            train_changePoints = train_changePoints[data_split["train"](train_changePoints)]
-
-            train_indices = torch.cat([torch.from_numpy(train_indices), torch.from_numpy(train_changePoints)])
-            train_label_weights = torch.cat(
-                [torch.from_numpy(train_label_weights), torch.full_like(torch.from_numpy(train_changePoints), 1/train_changePoints.shape[0])])
-
-            print(f"Sampling {examples_per_epoch} (balanced) observations per epoch.")
-            self.train_sampler = WeightedRandomSampler(train_label_weights, int(counts.float().mean().ceil().item()), replacement=True)
+            train_indices, train_sampler = reduce_imbalance(train_indices, self.stsds, data_split["train"])
+            self.train_sampler = train_sampler
 
         clr_indices = None
         if mode == "clr3":
-            window_id, window_lb = self.stsds.getSameClassWindowIndex()
-            window_id = window_id
-            window_lb = window_lb.numpy()
+            clr_indices = self.stsds.getIndicesByClass(data_split["train"])
 
-            window_lb = window_lb[data_split["train"](window_id)]
-            window_id = window_id[data_split["train"](window_id)]
-
-            print(window_lb, np.unique(window_lb))
-
-            clr_indices = []
-            for cl in np.unique(window_lb):
-                clr_indices.append(window_id[window_lb==cl])
+        self.stsds.toTensor()
 
         self.ds_train = StreamingTimeSeriesCopy(
             self.stsds, train_indices, label_mode, mode, mtf_bins, clr_indices)
