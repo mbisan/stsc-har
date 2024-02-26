@@ -30,7 +30,7 @@ def main(args):
             args.cf, args.lr, args.weight_decayL1, args.weight_decayL2, args.encoder_architecture, 
             modelname, args.overlap if args.overlap>=0 else args.window_size - 1, monitor="val_re")
         modeltype = SegWrapper
-    if "clr" in args.mode:
+    elif "clr" in args.mode:
         model = ContrastiveWrapper(
             args.encoder_architecture, dm.n_dims, args.encoder_features, 
             args.lr, args.weight_decayL1, args.weight_decayL2, modelname, window_size=args.window_size, 
