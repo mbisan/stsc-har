@@ -215,8 +215,84 @@ class MHEALTHDataset(STSDataset):
                     processed dataset.
                 wsize: window size
                 wstride: window stride
-                sensors: Sensor location, "chest", "ECG", "ankle", "arm" 
+                location: Sensor location, "chest", "ECG", "ankle", "arm" 
                 (ECG is technically not a location, but it differs in type of sensor too much) 
+        '''
+
+        # load dataset
+        subject_dir = list(filter(
+            lambda x: "subject" in x,
+            os.listdir(os.path.join(dataset_dir)))
+        )
+        subject_dir.sort()
+        
+        splits = [0]
+        self.subject_indices = [0]
+
+        STS = []
+        SCS = []
+
+        for subject in subject_dir:
+            # get separated STS
+            segments = filter(
+                lambda x: any([loc in x for loc in location]),
+                os.listdir(os.path.join(dataset_dir, subject)))
+            segments = sorted(list(segments))
+
+            sensor_data = []
+            label_data = np.load(os.path.join(dataset_dir, subject, "label.npy"))
+            SCS.append(label_data)
+
+            for s in segments:
+                sensor_data.append(np.load(os.path.join(dataset_dir, subject, s)))
+            STS.append(np.concatenate(sensor_data, axis=1))            
+
+            splits.append(splits[-1] + label_data.shape[0])
+
+            self.subject_indices.append(splits[-1])
+
+        self.splits = np.array(splits)
+
+        self.STS = np.concatenate(STS).T
+        self.SCS = np.squeeze(np.concatenate(SCS).astype(np.int32))
+
+        self.label_mapping = label_mapping
+        if not self.label_mapping is None:
+            self.SCS = self.label_mapping[self.SCS]
+
+        self.indices = np.arange(self.SCS.shape[0])
+        for i in range(wsize * wstride):
+            self.indices[self.splits[:-1] + i] = 0
+        self.indices[self.SCS == 100] = 0 # remove observations with no label
+        self.indices = self.indices[np.nonzero(self.indices)]
+
+        if normalize:
+            self.normalizeSTS("normal")
+
+
+class PAMAP2Dataset(STSDataset):
+
+    def __init__(self,
+            dataset_dir: str = None,
+            wsize: int = 10,
+            wstride: int = 1,
+            normalize: bool = True,
+            label_mapping: np.ndarray = None,
+            location: list[str] = ["chest", "ankle", "hand"],
+            sensor_type: list[str] = ["acc_16g", "acc_6g", "gyro", "mag", "orientation", "temp", "HR"]
+            ) -> None:
+        super().__init__(wsize=wsize, wstride=wstride)
+
+        '''
+            PAMAP2 dataset handler
+
+            Inputs:
+                dataset_dir: Directory of the prepare_har_dataset.py
+                    processed dataset.
+                wsize: window size
+                wstride: window stride
+                sensor_type: "acc_16g", "acc_6g", "gyro", "mag", "orientation", "temp", "HR"
+                location: "chest", "ankle", "hand"
         '''
 
         # load dataset
