@@ -12,6 +12,7 @@ from pytorch_lightning import seed_everything
 import numpy as np
 
 import json
+import subprocess
 
 import warnings # shut up warnings
 warnings.simplefilter("ignore", category=UserWarning)
@@ -65,7 +66,12 @@ def main(args):
             "target": model.monitor, "mode": "max"
         }, modeltype=modeltype)
     
-    data = {**data, "args": args.__dict__, "name": modelname}
+    data = {
+        **data, 
+        "args": args.__dict__, 
+        "name": modelname, 
+        "commit": subprocess.check_output(["git", "describe", "--always"]).strip().decode()
+    }
     data["cm"] = cm_str(data["cm"]) if len(data["cm"]) > 0 else None
     data = json.dumps(data, indent=2).replace("<>]\"", "]").replace("\"<>", "").replace("\\n", "\n")
     with open(os.path.join(args.training_dir, modeldir, "results.json"), "w") as f:
