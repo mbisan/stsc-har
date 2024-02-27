@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 
 import numpy as np
 import torch
-from nets.metrics import print_cm, metrics_from_cm
+from nets.metrics import print_cm, metrics_from_cm, group_classes
 
 import json
 
@@ -84,6 +84,22 @@ def main(args):
 
         print("Copy->", copy, sep="")
 
+        if len(args.sum_labels) > 0:
+            print("Summing matrices:")
+            new_cm = group_classes(cm_summed, args.sum_labels)
+
+            print_cm(new_cm, new_cm.shape[0])
+            copy = ""
+            for key, value in metrics_from_cm(new_cm).items():
+                value = value[~value.isnan()]
+                m = value.mean().item()
+                s = value.std().item()
+                copy += f"{m:.5f}\t{s:.5f}\t"
+
+                print(key, value, "->", value.mean().item(), f"({value.std().item()})")
+
+            print("Copy->", copy, sep="")
+
     entries = list(filter(lambda x: (("val" in x) or ("test" in x)) and (not "sub" in x), entries))
     entries.sort()
 
@@ -128,7 +144,11 @@ if __name__ == "__main__":
         help="Name of the output file to look for")
     parser.add_argument("--csv", action="store_true", 
         help="Print in csv format")
+    parser.add_argument("--sum_labels", nargs="+", type=str, default=[],
+        help="Combine labels")
 
     args = parser.parse_args()
+
+    args.sum_labels = [[int(k) for k in i.split(",")] for i in args.sum_labels]
 
     main(args)
