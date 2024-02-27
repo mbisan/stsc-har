@@ -57,3 +57,22 @@ UCI_HAR_LABELS = {
 ucihar_label_mapping = np.zeros(13, dtype=np.int64)
 ucihar_label_mapping[0] = 100
 ucihar_label_mapping[1:] = np.arange(12)
+
+MHEALTH_LABELS = {
+    1: "Standing still",
+    2: "Sitting and relaxing",
+    3: "Lying",
+    4: "Walking",
+    5: "Climb stairs",
+    6: "Waist bends forward",          
+    7: "Frontal elevation of arms",
+    8: "Knees bending (crouch)",
+    9: "Cycling",
+    10: "Jogging",
+    11: "Running",
+    12: "Jump front and back",
+}
+
+mhealth_label_mapping = np.zeros(13, dtype=np.int64)
+mhealth_label_mapping[1:] = np.arange(12)
+mhealth_label_mapping[0] = 100
