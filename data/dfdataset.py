@@ -39,8 +39,8 @@ class DFDataset(Dataset):
         self.dm_transform = dm_transform
 
         self.n_patterns = self.patterns.shape[0] if len(self.patterns.shape) == 3 else self.patterns.shape[0] * self.stsds.STS.shape[0]
-        if not self.stsds.feature_group is None and len(self.patterns.shape) == 3:
-            self.n_patterns *= len(self.stsds.feature_group)
+        # if not self.stsds.feature_group is None and len(self.patterns.shape) == 3:
+        #     self.n_patterns *= len(self.stsds.feature_group)
 
         self.rho = rho
 
@@ -100,7 +100,8 @@ class DFDataset(Dataset):
 
             DM_groups.append(DM)
         
-        return np.concatenate(DM_groups, axis=0)
+        # return np.concatenate(DM_groups, axis=0)
+        return sum(DM_groups)
 
     def __len__(self):
         return len(self.stsds)
