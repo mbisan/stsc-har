@@ -102,3 +102,19 @@ PAMAP2_LABELS = {
 
 pamap2_label_mapping = np.array(
     [100, 0, 1, 2, 3, 4, 5, 6, -1, 7, 8, 9, 10, 11, -1, -1, 12, 13, 14, 15, 16, -1, -1, -1, 17], dtype=np.int64)
+
+pamap2_basic_activity_recognition = np.array(
+    [100, 0, 1, 1, 2, 3, 4, 100, # up to nordic walking, label "other": 5
+      -1, 100, 100, 100, 100, 100, -1, -1, 100, 100, 100, 100, 100, -1, -1, -1, 100], dtype=np.int64)
+
+pamap2_background_activity_recognition = np.array(
+    [100, 0, 1, 1, 2, 3, 4, 5, # up to nordic walking, label "other": 5
+      -1, 100, 100, 100, 5, 5, -1, -1, 5, 5, 100, 100, 100, -1, -1, -1, 5], dtype=np.int64)
+
+pamap2_all_activity_recognition = np.array(
+    [100, 0, 1, 2, 3, 4, 5, 6, # up to nordic walking, label "other": 5
+      -1, 100, 100, 100, 7, 8, -1, -1, 9, 10, 100, 100, 100, -1, -1, -1, 11], dtype=np.int64)
+
+if __name__ == "__main__":
+    for i, val in PAMAP2_LABELS.items():
+        print(val, pamap2_basic_activity_recognition[i])
