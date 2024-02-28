@@ -302,6 +302,8 @@ class PAMAP2Dataset(STSDataset):
         )
         subject_dir.sort()
         
+        condition = lambda x: any([loc in x for loc in location]) and any([ty in x for ty in sensor_type])
+
         splits = [0]
         self.subject_indices = [0]
 
@@ -310,20 +312,38 @@ class PAMAP2Dataset(STSDataset):
 
         for subject in subject_dir:
             # get separated STS
-            segments = filter(
-                lambda x: any([loc in x for loc in location]),
+            exp1 = filter(
+                lambda x: condition(x) and "0.npy" in x,
                 os.listdir(os.path.join(dataset_dir, subject)))
-            segments = sorted(list(segments))
+            exp1 = sorted(list(exp1))
 
             sensor_data = []
-            label_data = np.load(os.path.join(dataset_dir, subject, "label.npy"))
+            label_data = np.load(os.path.join(dataset_dir, subject, "label0.npy"))
             SCS.append(label_data)
-
-            for s in segments:
+            # print(os.path.join(dataset_dir, subject, "label0.npy"))
+            for s in exp1:
                 sensor_data.append(np.load(os.path.join(dataset_dir, subject, s)))
             STS.append(np.concatenate(sensor_data, axis=1))            
 
             splits.append(splits[-1] + label_data.shape[0])
+
+            # experiment 2 (some of the users)
+            exp2 = filter(
+                lambda x: condition(x) and "1.npy" in x,
+                os.listdir(os.path.join(dataset_dir, subject)))
+            exp2 = sorted(list(exp2))
+
+            if len(exp2) > 0:
+                sensor_data = []
+                label_data = np.load(os.path.join(dataset_dir, subject, "label1.npy"))
+                # print(os.path.join(dataset_dir, subject, "label1.npy"))
+                SCS.append(label_data)
+
+                for s in exp2:
+                    sensor_data.append(np.load(os.path.join(dataset_dir, subject, s)))
+                STS.append(np.concatenate(sensor_data, axis=1))            
+
+                splits.append(splits[-1] + label_data.shape[0])
 
             self.subject_indices.append(splits[-1])
 

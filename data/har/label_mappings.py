@@ -76,3 +76,29 @@ MHEALTH_LABELS = {
 mhealth_label_mapping = np.zeros(13, dtype=np.int64)
 mhealth_label_mapping[1:] = np.arange(12)
 mhealth_label_mapping[0] = 100
+
+
+PAMAP2_LABELS = {
+    1: "lying",  #0
+    2: "sitting", #1
+    3: "standing", #2
+    4: "walking", #3
+    5: "running", #4
+    6: "cycling", #5
+    7: "Nordic walking", #6
+    9: "watching TV", #7
+    10: "computer work", #8
+    11: "car driving", #9
+    12: "ascending stairs", #10
+    13: "descending stairs", #11
+    16: "vacuum cleaning", #12
+    17: "ironing", #13
+    18: "folding laundry", #14
+    19: "house cleaning", #15
+    20: "playing soccer", #16
+    24: "rope jumping", #17
+    0: "other" #100 (transient activities)
+}
+
+pamap2_label_mapping = np.array(
+    [100, 0, 1, 2, 3, 4, 5, 6, -1, 7, 8, 9, 10, 11, -1, -1, 12, 13, 14, 15, 16, -1, -1, -1, 17], dtype=np.int64)
