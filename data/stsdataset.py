@@ -38,13 +38,11 @@ class StreamingTimeSeriesCopy(Dataset):
             c_ = torch.mode(c[-self.label_mode:]).values
 
             if c_==100:
-                c = c[-1]
-            else:
-                c = c_
+                c_ = c[-1]
         else:
-            c = c[-1]
+            c_ = c[-1]
         
-        if self.mode == "clr3" and not self.clr_indices is None:
+        if (self.mode == "clr3" or self.mode == "clr") and not self.clr_indices is None:
             close_id = np.random.choice(self.clr_indices[c], 1).item()
             far_cl = (np.random.choice(len(self.clr_indices) - 1) + c + 1) % len(self.clr_indices)
             far_id = np.random.choice(self.clr_indices[far_cl], 1).item()
@@ -53,33 +51,37 @@ class StreamingTimeSeriesCopy(Dataset):
             far_ts, far_c = self.stsds[far_id]
 
             # element 0 and 1 belong to the same class, element 2 belongs to another class
-            return {"series": ts, "label": c, "triplet": torch.stack([ts, close_ts, far_ts])}
+            return {"series": ts, "label": c_, "triplet": torch.stack([ts, close_ts, far_ts])}
 
         if self.mode == "gasf":
             transformed = gaf_compute(ts, "s", (-1, 1))
-            return {"series": ts, "label": c, "transformed": transformed}
+            return {"series": ts, "label": c_, "transformed": transformed}
 
         elif self.mode == "gadf":
             transformed = gaf_compute(ts, "d", (-1, 1))
-            return {"series": ts, "label": c, "transformed": transformed}
+            return {"series": ts, "label": c_, "transformed": transformed}
 
         elif self.mode == "mtf":
             transformed = mtf_compute(ts, self.mtf_bins, (-1, 1))
-            return {"series": ts, "label": c, "transformed": transformed}
+            return {"series": ts, "label": c_, "transformed": transformed}
         
         elif self.mode == "fft":
             transformed = torch.fft.fft(ts, dim=-1)
             transformed = torch.cat([transformed.real, transformed.imag], dim=0)
-            return {"series": ts, "label": c, "transformed": transformed}
+            return {"series": ts, "label": c_, "transformed": transformed}
 
         elif self.mode == "cwt_test":
             transformed = pywt.cwt(ts.numpy(), scales=np.arange(1, ts.shape[1]//2, dtype=np.float64), sampling_period=1, wavelet="morl")[0]
             transformed = torch.from_numpy(transformed)
             transformed = transformed.permute(1, 0, 2)
-            return {"series": ts, "label": c, "transformed": transformed}
+            return {"series": ts, "label": c_, "transformed": transformed}
+
+        elif self.mode == "ts":
+            return {"series": ts, "label": c_}
 
         else:
-            return {"series": ts, "label": c}
+            # change_point is true if the window contains more than one class
+            return {"series": ts, "label": c_, "scs": c, "change_point": c.unique().shape[0] > 1} 
     
     def __del__(self):
         del self.stsds
@@ -138,7 +140,7 @@ class LSTSDataset(LightningDataModule):
             self.train_sampler = train_sampler
 
         clr_indices = None
-        if mode == "clr3":
+        if mode == "clr3" or mode == "clr":
             clr_indices = self.stsds.getIndicesByClass(data_split["train"])
 
         self.stsds.toTensor()
