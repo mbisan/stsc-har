@@ -56,7 +56,7 @@ def load_dataset(dataset_name, dataset_home_directory, window_size, window_strid
     elif dataset_name == "PAMAP2_bg":
         ds = PAMAP2Dataset(
             os.path.join(dataset_home_directory, "PAMAP2"), 
-            wsize=window_size, wstride=window_stride, normalize=normalize, label_mapping=pamap2_basic_activity_recognition,
+            wsize=window_size, wstride=window_stride, normalize=normalize, label_mapping=pamap2_background_activity_recognition,
             location=["chest", "ankle", "hand"], sensor_type=["acc_16g", "gyro", "mag"]) 
     elif dataset_name == "PAMAP2_all":
         ds = PAMAP2Dataset(
