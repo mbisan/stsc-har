@@ -97,6 +97,9 @@ def get_model_name(args):
     if args.mode == "seg":
         modelname += f"{ '-'.join([str(rate) for rate in args.pooling])}_{args.cf}|ks{args.pattern_size}|"
 
+    if args.mode == "clr3":
+        modelname += f"decay{args.cf}|"
+
     return modelname[:-1]
 
 

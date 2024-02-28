@@ -216,7 +216,7 @@ class ContrastiveWrapper(BaseWrapper):
         if mode == "clr3":
             self.contrastive_loss = TripletLoss(epsilon=1e-6, m=5.0)
         elif mode == "clr":
-            self.contrastive_loss = ContrastiveDist(epsilon=1e-6, m=5.0)
+            self.contrastive_loss = SupConLoss()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.encoder(x) 
@@ -224,7 +224,8 @@ class ContrastiveWrapper(BaseWrapper):
         x = self.mlp1(x)
         x = self.mlp2(x)
         # x must be a (n, d) dimensional matrix
-        # x = F.normalize(x, p=2, dim=-1)
+        if self.mode == "clr":
+            x = F.normalize(x, p=2, dim=-1)
         return x # projection module is only used while training
 
     def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
@@ -243,7 +244,10 @@ class ContrastiveWrapper(BaseWrapper):
             self.labels.append(batch["label"])
 
         # Compute the loss and metrics
-        loss = self.contrastive_loss(output, labels=batch["label"])
+        if stage == "train":
+            loss = self.contrastive_loss(output)
+        else:
+            loss = 0
 
         # log loss and metrics
         self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
@@ -292,4 +296,91 @@ class ContrastiveWrapper(BaseWrapper):
             self.rpr = representations
 
         self.log(f"{stage}_auroc", auroc, on_epoch=True, on_step=False, prog_bar=True, logger=True)
-        self.log(f"{stage}_aupr", aupr, on_epoch=True, on_step=False, prog_bar=True, logger=True)
+        self.log(f"{stage}_ap", aupr, on_epoch=True, on_step=False, prog_bar=True, logger=True)
+
+
+
+class AutoencoderWrapper(BaseWrapper):
+
+    def __init__(self, encoder_arch, in_channels, latent_features, decoder_arch, lr, weight_decayL1, weight_decayL2, latent_regularizer=0.01, 
+        name=None, window_size=8, **kwargs) -> None:
+
+        # save parameters as attributes
+        super().__init__(lr, weight_decayL1, weight_decayL2, 2, **kwargs), self.__dict__.update(locals())
+        self.save_hyperparameters()
+
+        self.encoder = encoder_dict[encoder_arch](
+            channels=in_channels, ref_size=0, 
+            wdw_size=window_size, n_feature_maps=latent_features
+        )
+
+        output_shape = self.encoder.get_output_shape()
+        
+        self.decoder = decoder_dict[decoder_arch](
+            inp_feats=output_shape[1], hid_feats=latent_features, out_feats=in_channels
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.encoder(x) 
+        y = self.decoder(x)
+        return {"reconstruction": y, "latent": x}
+
+    def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
+
+        """ Inner step for the training, validation and testing. """
+
+        # Forward pass
+        output = self.forward(batch["series"])
+        diff = output["reconstruction"] - batch["series"]
+        reconstruction_error = diff.square().sum(dim=(-2, -1))
+
+        if stage != "train":
+            self.probabilities.append(reconstruction_error) # save the reconstruction difference
+            # from batch["scs"] we can extract if there is a change point in the window 
+            # by simply checking how many unique labels are there in the window
+            self.labels.append(batch["change_point"])
+
+        # Compute the loss (MSE)
+        loss = reconstruction_error.mean()
+
+        # log loss and metrics
+        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=stage=="train", prog_bar=True, logger=True)
+
+        loss = loss + self.latent_regularizer * output["latent"].sum(dim=(-2, -1)).mean()
+
+        # return loss
+        if stage == "train":
+            return loss.to(torch.float32) + self.regularizer_loss()
+
+        return loss.to(torch.float32)
+
+    def log_metrics(self, stage):
+        if stage=="train":
+            return
+
+        reconstruction_errors = torch.concatenate(self.probabilities, dim=0) # dim (n, channels, window_size)
+        labels = torch.concatenate(self.labels, dim=0).long()
+
+        reconstruction_errors = reconstruction_errors.cpu().numpy()
+        labels = labels.cpu().numpy()
+
+        try:
+            fpr, tpr, thresholds = roc_curve(labels, reconstruction_errors)
+            auroc = auc(fpr, tpr)
+
+            for i, tpr_ in enumerate(tpr):
+                if tpr_ > 0.95:
+                    self.log(f"{stage}_fpr95", fpr[i], on_epoch=True, on_step=False, prog_bar=False, logger=True)
+                    self.log(f"{stage}_th", thresholds[i], on_epoch=True, on_step=False, prog_bar=False, logger=True)
+                    break
+
+            aupr = average_precision_score(labels, reconstruction_errors)
+        except:
+            auroc = 0
+            aupr = 0
+
+        self.dissimilarities = reconstruction_errors
+        self.labels_ = labels
+
+        self.log(f"{stage}_auroc", auroc, on_epoch=True, on_step=False, prog_bar=True, logger=True)
+        self.log(f"{stage}_ap", aupr, on_epoch=True, on_step=False, prog_bar=True, logger=True)

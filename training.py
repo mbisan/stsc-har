@@ -6,7 +6,7 @@ from utils.methods import train_model
 
 from utils.arguments import get_parser, get_model_name
 
-from nets.wrapper import DFWrapper, SegWrapper, ContrastiveWrapper
+from nets.wrapper import DFWrapper, SegWrapper, ContrastiveWrapper, AutoencoderWrapper
 
 from pytorch_lightning import seed_everything
 import numpy as np
@@ -35,8 +35,14 @@ def main(args):
         model = ContrastiveWrapper(
             args.encoder_architecture, dm.n_dims, args.encoder_features, 
             args.lr, args.weight_decayL1, args.weight_decayL2, modelname, window_size=args.window_size, 
-            output_regularizer=args.cf, mode=args.mode, monitor="val_aupr")
+            output_regularizer=args.cf, mode=args.mode, monitor="val_ap")
         modeltype = ContrastiveWrapper
+    elif args.mode == "ae":
+        model = AutoencoderWrapper(
+            args.encoder_architecture, dm.n_dims, args.encoder_features, args.decoder_architecture,
+            args.lr, args.weight_decayL1, args.weight_decayL2, args.cf, modelname, args.window_size, monitor="val_ap"
+        )
+        modeltype = AutoencoderWrapper
     else:
         model = DFWrapper(
             args.mode,
