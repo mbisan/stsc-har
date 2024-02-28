@@ -380,6 +380,8 @@ def prepare_pamap2(dataset_dir):
         "ankle_orientation": ["ankle_orientation_1", "ankle_orientation_2", "ankle_orientation_3", "ankle_orientation_4"]
     }
 
+    nonzero = lambda z: z.nonzero()[0]
+
     for i, subjects in enumerate([subject_files_0, subject_files_1]):
         for subject in subjects:
             df = pandas.read_csv(os.path.join(dataset_dir, "PAMAP2_Dataset", "Protocol" if i==0 else "Optional", subject), 
@@ -393,29 +395,40 @@ def prepare_pamap2(dataset_dir):
 
             for name, value in sensor_groups.items():
 
+                # the dataset contains nans, so we interpolate the missing values
+                sensor_data = df[value].to_numpy()
+
+                if len(sensor_data.shape) == 1:
+                    sensor_data = np.expand_dims(sensor_data, -1)
+
+                for j in range(sensor_data.shape[1]):
+                    # sensor data has shape (n, k), each column of size n is filled separately
+                    nan_mask = np.isnan(sensor_data[:, j])
+                    sensor_data[nan_mask, j] = np.interp(nonzero(nan_mask), nonzero(~nan_mask), sensor_data[~nan_mask, j])
+
                 with open(os.path.join(subject_folder, f"{name}{i}.npy"), "wb") as f:
-                    np.save(f, df[value].to_numpy())
+                    np.save(f, sensor_data)
 
 if __name__ == "__main__":
     if not os.path.exists("./datasets"):
         os.mkdir("./datasets")
 
-    download("UCI-HAR", "./datasets")
-    download("HARTH", "./datasets")
-    download("WISDM", "./datasets")
-    download("MHEALTH", "./datasets")
-    download("PAMAP2", "./datasets")
+    # download("UCI-HAR", "./datasets")
+    # download("HARTH", "./datasets")
+    # download("WISDM", "./datasets")
+    # download("MHEALTH", "./datasets")
+    # download("PAMAP2", "./datasets")
 
-    unpack("PAMAP2", "./datasets")
-    unpack("MHEALTH", "./datasets")
-    unpack("UCI-HAR", "./datasets")
-    unpack("HARTH", "./datasets")
-    unpack("WISDM", "./datasets")
+    # unpack("PAMAP2", "./datasets")
+    # unpack("MHEALTH", "./datasets")
+    # unpack("UCI-HAR", "./datasets")
+    # unpack("HARTH", "./datasets")
+    # unpack("WISDM", "./datasets")
     
-    prepare_mhealth("./datasets/MHEALTH")
+    # prepare_mhealth("./datasets/MHEALTH")
     prepare_pamap2("./datasets/PAMAP2")
-    prepare_uci_har("./datasets/UCI-HAR")
-    prepare_harth("./datasets/HARTH")
-    prepare_wisdm("./datasets/WISDM")
+    # prepare_uci_har("./datasets/UCI-HAR")
+    # prepare_harth("./datasets/HARTH")
+    # prepare_wisdm("./datasets/WISDM")
 
     pass
