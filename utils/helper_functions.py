@@ -47,7 +47,19 @@ def load_dataset(dataset_name, dataset_home_directory, window_size, window_strid
             os.path.join(dataset_home_directory, "HARTH"), 
             wsize=window_size, wstride=window_stride, normalize=normalize, label_mapping=harth_label_mapping)
         ds.feature_group = [np.array([0, 1, 2]), np.array([3, 4, 5])]
-    
+    elif dataset_name == "PAMAP2":
+        ds = PAMAP2Dataset(
+            os.path.join(dataset_home_directory, "PAMAP2"), 
+            wsize=window_size, wstride=window_stride, normalize=normalize, label_mapping=pamap2_label_mapping,
+            location=["chest", "ankle", "hand"], sensor_type=["acc_16g", "gyro", "mag"]) 
+            # these are 27 features (ankle_acc, ankle_gyro, ankle_mag, chest_acc, chest_gyro, chest_mag, hand_acc, hand_gyro, hand_mag)
+    elif dataset_name == "MHEALTH":
+        ds = MHEALTHDataset(
+            os.path.join(dataset_home_directory, "MHEALTH"), 
+            wsize=window_size, wstride=window_stride, normalize=normalize, label_mapping=mhealth_label_mapping,
+            location=["chest", "ankle", "arm"])
+            # these are 21 features (chest_acc, ankle_acc, ankle_gyro, ankle_mag, arm_acc, arm_gyro, arm_mag)
+
     return ds
 
 def load_dmdataset(
