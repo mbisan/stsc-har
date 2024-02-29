@@ -11,7 +11,7 @@ from pytorch_lightning import seed_everything
 import numpy as np
 
 from utils.helper_functions import load_dm, str_time, cm_str
-from utils.methods import train_model
+from utils.methods import train_model, PLKWargs, MetricsSetting
 
 from utils.arguments import get_parser, get_model_name
 
@@ -65,14 +65,9 @@ def main(args):
             np.save(f, dm.dfds.patterns)
 
     print("\n" + "Start training:")
-    model, data = train_model(dm, model, max_epochs=args.max_epochs, pl_kwargs={
-            "default_root_dir": args.training_dir,
-            "accelerator": "auto",
-            "seed": 42
-        },
-        metrics={
-            "target": model.monitor, "mode": "max"
-        }, modeltype=modeltype)
+    model, data = train_model(dm, model, max_epochs=args.max_epochs,
+        pl_kwargs=PLKWargs(args.training_dir, "auto", 42),
+        metrics=MetricsSetting(model.monitor, "max"), modeltype=modeltype)
 
     data = {
         **data,

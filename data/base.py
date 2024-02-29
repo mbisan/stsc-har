@@ -3,14 +3,14 @@ import torch
 
 from torch.utils.data import Dataset
 
+# pylint: disable=invalid-name too-many-instance-attributes
+
 class STSDataset(Dataset):
 
     def __init__(self,
             wsize: int = 10,
             wstride: int = 1,
             ) -> None:
-        super().__init__()
-
         '''
             Base class for STS dataset
 
@@ -18,6 +18,7 @@ class STSDataset(Dataset):
                 wsize: window size
                 wstride: window stride
         '''
+        super().__init__()
 
         self.wsize = wsize
         self.wstride = wstride
@@ -27,20 +28,23 @@ class STSDataset(Dataset):
         self.STS = None
         self.SCS = None
 
-        self.indices = None
+        self.indices = np.array([])
+        self.mean = None
+        self.std = None
 
-        self.feature_group = None # dict with groups of features i.e. [np.array([0, 1, 2]), np.array([3, 4, 5])]
+        # dict with groups of features i.e. [np.array([0, 1, 2]), np.array([3, 4, 5])]
+        self.feature_group = None
 
     def __len__(self):
         return self.indices.shape[0]
-    
+
     def __getitem__(self, index: int) -> tuple[np.ndarray, np.ndarray]:
 
         first = self.indices[index]-self.wsize*self.wstride+self.wstride
         last = self.indices[index]+1
 
         return self.STS[:, first:last:self.wstride], self.SCS[first:last:self.wstride]
-    
+
     def position(self, index: int) -> tuple[np.ndarray, np.ndarray]:
 
         first = index-self.wsize*self.wstride+self.wstride
@@ -54,13 +58,13 @@ class STSDataset(Dataset):
         return_sts = np.empty((indexes.shape[0], self.STS.shape[0], self.wsize))
         return_scs = np.empty((indexes.shape[0], self.wsize))
 
-        for i, id in enumerate(indexes):
-            ts, c = self[id]
+        for i, _id in enumerate(indexes):
+            ts, c = self[_id]
             return_scs[i] = c
             return_sts[i] = ts
 
         return return_sts, return_scs
-    
+
     def getSameClassWindowIndex(self, return_mask=False):
         # returns array with positions in the indices with same class windows
         diff = np.diff(self.SCS)
@@ -79,9 +83,9 @@ class STSDataset(Dataset):
             return indices_new
 
         sameClassWindowIndex = np.arange(self.indices.shape[0])[indices_new]
-        
+
         return sameClassWindowIndex, self.SCS[self.indices[sameClassWindowIndex]]
-    
+
     def getChangePointIndex(self):
         # returns array with positions in the indices with change points
         diff = np.diff(self.SCS)
@@ -95,7 +99,7 @@ class STSDataset(Dataset):
 
         return changePointIndex
 
-    def normalizeSTS(self, mode):
+    def normalizeSTS(self, _):
         self.mean = np.expand_dims(self.STS.mean(1), 1)
         self.std = np.expand_dims(np.std(self.STS, axis=1), 1)
 
@@ -108,16 +112,16 @@ class STSDataset(Dataset):
             self.SCS = torch.from_numpy(self.SCS).to(torch.int64)
 
     def getIndicesByClass(self, data_split = lambda x: x > 0):
-            window_id, window_lb = self.getSameClassWindowIndex()
+        window_id, window_lb = self.getSameClassWindowIndex()
 
-            window_lb = window_lb[data_split(window_id)]
-            window_id = window_id[data_split(window_id)]
+        window_lb = window_lb[data_split(window_id)]
+        window_id = window_id[data_split(window_id)]
 
-            clr_indices = []
-            for cl in np.unique(window_lb):
-                clr_indices.append(window_id[window_lb==cl])
+        clr_indices = []
+        for cl in np.unique(window_lb):
+            clr_indices.append(window_id[window_lb==cl])
 
-            return clr_indices
+        return clr_indices
 
 class StreamingTimeSeries(STSDataset):
 
@@ -174,16 +178,19 @@ def split_by_test_subject(sts, test_subject, n_val_subjects, seed=42):
 
     val_subject_indices = np.arange(len(subject_splits) - 1)
     val_subjects_selected = list(rng.choice(val_subject_indices, n_val_subjects, replace=False))
-    
+
     if not isinstance(test_subject, list):
         test_subject = [test_subject]
 
     for s in test_subject:
         if s > len(subject_splits) - 1:
-            raise Exception(f"No subject with index {s}")
+            raise ValueError(f"No subject with index {s}")
 
     return {
-        "train": lambda x: return_indices_train(x, subjects=test_subject + val_subjects_selected, subject_splits=subject_splits),
-        "val": lambda x: return_indices_test(x, subjects=val_subjects_selected, subject_splits=subject_splits),
-        "test": lambda x: return_indices_test(x, subjects=test_subject, subject_splits=subject_splits),
+        "train": lambda x: return_indices_train(
+            x, subjects=test_subject + val_subjects_selected, subject_splits=subject_splits),
+        "val": lambda x: return_indices_test(
+            x, subjects=val_subjects_selected, subject_splits=subject_splits),
+        "test": lambda x: return_indices_test(
+            x, subjects=test_subject, subject_splits=subject_splits),
     }

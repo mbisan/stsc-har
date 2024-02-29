@@ -1,20 +1,25 @@
 import numpy as np
 import torch
 
-from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
+from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning import LightningDataModule
 
-from data.base import STSDataset
-
-from transforms.gaf_mtf import mtf_compute, gaf_compute
 import pywt
 
+from data.base import STSDataset
 from data.methods import reduce_imbalance
+
+from transforms.gaf_mtf import mtf_compute, gaf_compute
 
 class StreamingTimeSeriesCopy(Dataset):
 
     def __init__(self,
-            stsds: STSDataset, indices: np.ndarray, label_mode: int = 1, mode: str = None, mtf_bins: int = 30, clr_indices: list[np.ndarray] = None
+            stsds: STSDataset,
+            indices: np.ndarray,
+            label_mode: int = 1,
+            mode: str = None,
+            mtf_bins: int = 30,
+            clr_indices: list[np.ndarray] = None
             ) -> None:
         super().__init__()
 
@@ -24,13 +29,13 @@ class StreamingTimeSeriesCopy(Dataset):
         self.mode = mode
         self.mtf_bins = mtf_bins
         self.clr_indices = clr_indices
-        
+
     def __len__(self):
         return self.indices.shape[0]
-    
+
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor, int]:
         ts, c = self.stsds[self.indices[index]]
-    
+
         if self.mode == "seg":
             return {"series": ts, "scs": c}
 
@@ -41,14 +46,15 @@ class StreamingTimeSeriesCopy(Dataset):
                 c_ = c[-1]
         else:
             c_ = c[-1]
-        
-        if (self.mode == "clr3" or self.mode == "clr") and not self.clr_indices is None:
+
+        if (self.mode in ["clr3", "clr"]) and not self.clr_indices is None:
             close_id = np.random.choice(self.clr_indices[c], 1).item()
             far_cl = (np.random.choice(len(self.clr_indices) - 1) + c + 1) % len(self.clr_indices)
+            # TODO balancear este sampleo
             far_id = np.random.choice(self.clr_indices[far_cl], 1).item()
 
-            close_ts, close_c = self.stsds[close_id]
-            far_ts, far_c = self.stsds[far_id]
+            close_ts, _ = self.stsds[close_id]
+            far_ts, _ = self.stsds[far_id]
 
             # element 0 and 1 belong to the same class, element 2 belongs to another class
             return {"series": ts, "label": c_, "triplet": torch.stack([ts, close_ts, far_ts])}
@@ -64,14 +70,17 @@ class StreamingTimeSeriesCopy(Dataset):
         elif self.mode == "mtf":
             transformed = mtf_compute(ts, self.mtf_bins, (-1, 1))
             return {"series": ts, "label": c_, "transformed": transformed}
-        
+
         elif self.mode == "fft":
+            # pylint: disable=not-callable
             transformed = torch.fft.fft(ts, dim=-1)
             transformed = torch.cat([transformed.real, transformed.imag], dim=0)
             return {"series": ts, "label": c_, "transformed": transformed}
 
         elif self.mode == "cwt_test":
-            transformed = pywt.cwt(ts.numpy(), scales=np.arange(1, ts.shape[1]//2, dtype=np.float64), sampling_period=1, wavelet="morl")[0]
+            transformed = pywt.cwt(
+                ts.numpy(), scales=np.arange(1, ts.shape[1]//2, dtype=np.float64),
+                sampling_period=1, wavelet="morl")[0]
             transformed = torch.from_numpy(transformed)
             transformed = transformed.permute(1, 0, 2)
             return {"series": ts, "label": c_, "transformed": transformed}
@@ -81,8 +90,8 @@ class StreamingTimeSeriesCopy(Dataset):
 
         else:
             # change_point is true if the window contains more than one class
-            return {"series": ts, "label": c_, "scs": c, "change_point": c.unique().shape[0] > 1} 
-    
+            return {"series": ts, "label": c_, "scs": c, "change_point": c.unique().shape[0] > 1}
+
     def __del__(self):
         del self.stsds
 
@@ -91,10 +100,12 @@ class LSTSDataset(LightningDataModule):
 
     """ Data module for the experiments. """
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(self,
-            stsds: STSDataset,    
-            data_split: dict, batch_size: int, 
-            random_seed: int = 42, 
+            stsds: STSDataset,
+            data_split: dict, batch_size: int,
+            random_seed: int = 42,
             num_workers: int = 1,
             reduce_train_imbalance: bool = False,
             label_mode: int = 1,
@@ -104,10 +115,11 @@ class LSTSDataset(LightningDataModule):
             same_class: bool = False,
             change_points: bool = True
             ) -> None:
+        # pylint: disable=too-many-arguments too-many-locals
 
         # save parameters as attributes
         super().__init__()
-        
+
         self.batch_size = batch_size
         self.random_seed = random_seed
         self.num_workers = num_workers
@@ -119,7 +131,7 @@ class LSTSDataset(LightningDataModule):
 
         self.l_patterns = None
 
-        # gather dataset info   
+        # gather dataset info
         self.n_dims = self.stsds.STS.shape[0]
         self.n_classes = np.sum(np.unique(self.stsds.SCS)!=100).item()
         self.n_patterns = self.n_classes
@@ -136,11 +148,12 @@ class LSTSDataset(LightningDataModule):
         self.reduce_train_imbalance = reduce_train_imbalance
 
         if reduce_train_imbalance:
-            train_indices, train_sampler = reduce_imbalance(train_indices, self.stsds, data_split["train"], include_change_points=change_points)
+            train_indices, train_sampler = reduce_imbalance(
+                train_indices, self.stsds, data_split["train"], include_change_points=change_points)
             self.train_sampler = train_sampler
 
         clr_indices = None
-        if mode == "clr3" or mode == "clr":
+        if mode in ["clr3", "clr"]:
             clr_indices = self.stsds.getIndicesByClass(data_split["train"])
 
         self.stsds.toTensor()
@@ -149,32 +162,31 @@ class LSTSDataset(LightningDataModule):
             self.stsds, train_indices, label_mode, mode, mtf_bins, clr_indices)
         self.ds_test = StreamingTimeSeriesCopy(self.stsds, test_indices, label_mode, mode, mtf_bins)
         self.ds_val = StreamingTimeSeriesCopy(self.stsds, val_indices, label_mode, mode, mtf_bins)
-        
+
     def train_dataloader(self) -> DataLoader:
         """ Returns the training DataLoader. """
         if self.reduce_train_imbalance:
-            return DataLoader(self.ds_train, batch_size=self.batch_size, 
+            return DataLoader(self.ds_train, batch_size=self.batch_size,
                 num_workers=self.num_workers, sampler=self.train_sampler,
                 pin_memory=True, persistent_workers=True)
-        else:
-            return DataLoader(self.ds_train, batch_size=self.batch_size, 
-                num_workers=self.num_workers, shuffle=True ,
-                pin_memory=True, persistent_workers=True)
+        return DataLoader(self.ds_train, batch_size=self.batch_size,
+            num_workers=self.num_workers, shuffle=True ,
+            pin_memory=True, persistent_workers=True)
 
     def val_dataloader(self) -> DataLoader:
         """ Returns the validation DataLoader. """
-        return DataLoader(self.ds_val, batch_size=self.batch_size, 
+        return DataLoader(self.ds_val, batch_size=self.batch_size,
             num_workers=self.num_workers, shuffle=False,
             pin_memory=True, persistent_workers=True)
 
     def test_dataloader(self) -> DataLoader:
         """ Returns the test DataLoader. """
-        return DataLoader(self.ds_test, batch_size=self.batch_size, 
+        return DataLoader(self.ds_test, batch_size=self.batch_size,
             num_workers=self.num_workers, shuffle=False,
             pin_memory=True, persistent_workers=True)
-    
+
     def predict_dataloader(self) -> DataLoader:
         """ Returns the test DataLoader. """
-        return DataLoader(self.ds_test, batch_size=self.batch_size, 
+        return DataLoader(self.ds_test, batch_size=self.batch_size,
             num_workers=self.num_workers, shuffle=False,
             pin_memory=True, persistent_workers=True)

@@ -1,16 +1,18 @@
-import numpy as np
+# pylint: disable=too-many-locals invalid-name
 
-from data.base import STSDataset
+import numpy as np
 
 from aeon.distances import pairwise_distance
 from tslearn.clustering import TimeSeriesKMeans
 
+from data.base import STSDataset
+
 # Methods to obtain patterns
 
 def compute_medoids(
-        X: np.ndarray, Y: np.ndarray, 
-        meds_per_class: int = 1, metric: str = 'dtw', 
-    ) -> tuple[np.ndarray, np.ndarray]: 
+        X: np.ndarray, Y: np.ndarray,
+        meds_per_class: int = 1, metric: str = 'dtw',
+    ) -> tuple[np.ndarray, np.ndarray]:
 
     """ Computes 'meds_per_class' medoids of each class in the dataset. """
 
@@ -19,7 +21,7 @@ def compute_medoids(
         'dtw', 'ddtw', 'wdtw', 'wddtw', 'lcss', 'edr', 'erp', 'msm']
     if metric not in suported_metrics:
         raise ValueError(f"The distance type must be one of {suported_metrics}.")
-    
+
     # grab the classes
     sdim, slen = X.shape[1], X.shape[2]
     classes = np.unique(Y)
@@ -27,7 +29,7 @@ def compute_medoids(
     # Initialize the arrays
     meds = np.empty((len(np.unique(Y)), meds_per_class, sdim, slen), dtype=float)
     meds_idx = np.empty((len(np.unique(Y)), meds_per_class), dtype=int)
-    
+
     # Find the medoids for each class
     for i, y in enumerate(classes):
         index = np.argwhere(Y == y)[:,0]
@@ -41,7 +43,8 @@ def compute_medoids(
     # Return the medoids and their indices
     return meds, meds_idx
 
-def sts_medoids(dataset: STSDataset, n = 100, pattern_size = -1, meds_per_class = 1, random_seed: int = 42):
+def sts_medoids(
+        dataset: STSDataset, n = 100, pattern_size = -1, meds_per_class = 1, random_seed: int = 42):
     np.random.seed(random_seed)
 
     window_id, window_lb = dataset.getSameClassWindowIndex()
@@ -49,12 +52,12 @@ def sts_medoids(dataset: STSDataset, n = 100, pattern_size = -1, meds_per_class 
     selected_w = []
     selected_c = []
 
-    for i, c in enumerate(np.unique(window_lb)):
+    for c in np.unique(window_lb):
         # get the random windows for the class c
 
         rw = np.random.choice(window_id[window_lb == c].reshape(-1), n)
 
-        ts, cs = dataset.sliceFromArrayOfIndices(rw)
+        ts, _ = dataset.sliceFromArrayOfIndices(rw)
 
         selected_w.append(ts)
         selected_c.append(np.full(n, c, np.int32))
@@ -62,14 +65,15 @@ def sts_medoids(dataset: STSDataset, n = 100, pattern_size = -1, meds_per_class 
     selected_w = np.concatenate(selected_w) # (n, dims, len)
     if pattern_size>0:
         selected_w = selected_w[:,:,-pattern_size:]
-    meds, meds_id = compute_medoids(selected_w, np.concatenate(selected_c, axis=0), meds_per_class=meds_per_class)
+    meds, _ = compute_medoids(
+        selected_w, np.concatenate(selected_c, axis=0), meds_per_class=meds_per_class)
 
     return meds.reshape((meds.shape[0]*meds.shape[1], meds.shape[2], meds.shape[3]))
 
 
 def sts_barycenter(dataset: STSDataset, n: int = 100, random_seed: int = 42):
     np.random.seed(random_seed)
-    
+
     window_id, window_lb = dataset.getSameClassWindowIndex()
     selected = np.empty((np.unique(window_lb).shape[0], dataset.STS.shape[0], dataset.wsize))
 
@@ -78,7 +82,7 @@ def sts_barycenter(dataset: STSDataset, n: int = 100, random_seed: int = 42):
 
         rw = np.random.choice(window_id[window_lb == c].reshape(-1), n)
 
-        ts, cs = dataset.sliceFromArrayOfIndices(rw)
+        ts, _ = dataset.sliceFromArrayOfIndices(rw)
 
         km = TimeSeriesKMeans(n_clusters=1, verbose=True, random_state=1, metric="dtw", n_jobs=-1)
         km.fit(np.transpose(ts, (0, 2, 1)))
@@ -104,11 +108,13 @@ def process_fft(STS, SCS):
         series_part = STS[:, (class_changes[i]+1):(class_changes[i+1]+1)]
         fft_size = 2**int(np.log2(series_part.shape[1]))
         fft_short = np.fft.fft(series_part, axis=-1, n=fft_size)
-        fft_freq = np.fft.fftfreq(fft_size) # highest frequencies for signals of sampling rate 50 is 25
+        # highest frequencies for signals of sampling rate 50 is 25
+        fft_freq = np.fft.fftfreq(fft_size)
 
         for c in range(fft_short.shape[0]):
             for j in range(fft_short.shape[1]):
-                magnitudes[current_class][c][fft_freq[j]] = magnitudes[current_class][c].get(fft_freq[j], 0) + np.abs(fft_short[c, j])
+                tmp = magnitudes[current_class][c].get(fft_freq[j], 0) + np.abs(fft_short[c, j])
+                magnitudes[current_class][c][fft_freq[j]] = tmp
 
     return magnitudes
 
@@ -117,27 +123,31 @@ def get_predominant_frequency(fft_mag, mode="per_class"):
     num_classes = len(classes_list)
 
     if mode=="per_class":
-        out = np.zeros((num_classes, len(fft_mag[0]))) # (n, c) we get a predominant frequency per channel, per class
+        # (n, c) we get a predominant frequency per channel, per class
+        out = np.zeros((num_classes, len(fft_mag[0])))
 
         for i, c in enumerate(classes_list):
             for j, channel_result in enumerate(fft_mag[c]):
-                sorted_fr = list(filter(lambda x: x[0]>0, sorted(channel_result.items(), key=lambda x:x[1])))
+                sorted_fr = list(
+                    filter(lambda x: x[0]>0, sorted(channel_result.items(), key=lambda x:x[1])))
                 out[i, j] = sorted_fr[-1][0]
-        
+
         return out
-    
-    elif mode=="per_channel": # get the frequencies with most importance in the fft transform
-        out = {} # frequencies magnitude total
 
-        for i, c in enumerate(classes_list):
-            for j, channel_result in enumerate(fft_mag[c]):
-                for f in channel_result.keys():
-                     out[f] = out.get(f, 0) + channel_result[f]                
-        
-        frequencies_ordered = np.array(list(filter(lambda x: x[0]>0, sorted(out.items(), key=lambda x:x[1], reverse=True))))
+    # elif mode=="per_channel": # get the frequencies with most importance in the fft transform
+    out = {} # frequencies magnitude total
 
-        return frequencies_ordered
-    
+    for i, c in enumerate(classes_list):
+        for j, channel_result in enumerate(fft_mag[c]):
+            for f in channel_result.keys():
+                out[f] = out.get(f, 0) + channel_result[f]
+
+    frequencies_ordered = np.array(list(
+        filter(lambda x: x[0]>0, sorted(out.items(), key=lambda x:x[1], reverse=True))
+    ))
+
+    return frequencies_ordered
+
 def process_fft_frequencies(STS, SCS, frequency_values):
     class_changes = list(np.nonzero(np.diff(SCS))[0])
     if class_changes[0] != 0:
@@ -153,7 +163,9 @@ def process_fft_frequencies(STS, SCS, frequency_values):
         current_class = SCS[class_changes[i]+1]
 
         series_part = STS[:, (class_changes[i]+1):(class_changes[i+1]+1)]
-        series_part = (series_part - np.mean(series_part, axis=1, keepdims=True)) / (np.std(series_part, axis=1, keepdims=True) + 1e-6)
+        series_part = (
+            series_part - np.mean(series_part, axis=1, keepdims=True)
+            ) / (np.std(series_part, axis=1, keepdims=True) + 1e-6)
         fft_size = series_part.shape[1]
         if fft_size<3:
             continue
@@ -163,9 +175,10 @@ def process_fft_frequencies(STS, SCS, frequency_values):
 
         for c in range(fft_short.shape[0]):
             freq_val = np.interp(frequency_values, fft_freq, fft_short[c, :])
-            magnitudes[current_class][c, :] *= class_counts[current_class]/(class_counts[current_class]+1)
-            magnitudes[current_class][c, :] += freq_val/(class_counts[current_class]+1)
-                
+            div = class_counts[current_class]+1
+            magnitudes[current_class][c, :] *= class_counts[current_class]/div
+            magnitudes[current_class][c, :] += freq_val/div
+
         class_counts[current_class] += 1
 
     return magnitudes

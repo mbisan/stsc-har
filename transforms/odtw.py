@@ -1,6 +1,8 @@
 from numba import jit, prange
 import numpy as np
 
+# pylint: disable=invalid-name not-an-iterable
+
 @jit(nopython=True, parallel=True)
 def fill_dtw(DM: np.ndarray, w: float) -> None:
     for p in prange(DM.shape[0]):
@@ -17,11 +19,10 @@ def compute_pointwise_ED2(DM: np.ndarray, STS: np.ndarray, patts: np.ndarray) ->
                 DM[p, i, j] = np.sum(np.square(STS[:, j] - patts[p, :, i]))
 
 def compute_oDTW(
-        STS: np.ndarray, 
-        patts: np.ndarray, 
-        rho: float, 
+        STS: np.ndarray,
+        patts: np.ndarray,
+        rho: float,
         ) -> np.ndarray:
-    
     '''
         STS has shape (c, n)
         patts has shape (n_patts, c, m)
@@ -42,7 +43,7 @@ def compute_oDTW(
 
     np.cumsum(DM[:,0,:], axis=1, out=DM[:,0,:])
     np.cumsum(DM[:,:,0], axis=1, out=DM[:,:,0])
-    
+
     fill_dtw(DM, w)
 
     # Return the DM
@@ -67,17 +68,17 @@ def compute_pointwise_ED2_channel(DM: np.ndarray, STS: np.ndarray, patts: np.nda
                     DM[p, c, i, j] = np.square(STS[c, j] - patts[p, i])
 
 def compute_oDTW_channel(
-        STS: np.ndarray, 
-        patts: np.ndarray, 
-        rho: float, 
+        STS: np.ndarray,
+        patts: np.ndarray,
+        rho: float,
         ) -> np.ndarray:
-    
     '''
         STS has shape (c, n)
         patts has shape (n_patts, m)
         rho: weight of the o-DTW for the (-m)-th element in the STS
 
-        returns: DM of shape (n_patts*c, m, n) i.e. each pattern is compared to each channel of the STS
+        returns: DM of shape (n_patts*c, m, n)
+        i.e. each pattern is compared to each channel of the STS
     '''
 
     lpatts: int = patts.shape[1]
@@ -90,7 +91,7 @@ def compute_oDTW_channel(
 
     np.cumsum(DM[:,:,0,:], axis=1, out=DM[:,:,0,:])
     np.cumsum(DM[:,:,:,0], axis=1, out=DM[:,:,:,0])
-    
+
     fill_dtw_channel(DM, w)
 
     # Return the DM

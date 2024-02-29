@@ -1,5 +1,6 @@
 import numpy as np
-from utils.pattern_extract import *
+from utils.pattern_extract import (
+    sts_medoids, process_fft, process_fft_frequencies, get_predominant_frequency)
 
 def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
     if pattern_type == "med":
@@ -43,7 +44,8 @@ def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
     elif pattern_type == "syn_g":
         print("Using synthetic shapes with gaussian noise...")
         meds = np.empty((3, pattern_size))
-        meds[0,:] = np.linspace(-1, 1, pattern_size) + 0.2 * np.random.randn(pattern_size) # sigma = 0.2*0.2 = 0.04 (std)
+        meds[0,:] = np.linspace(-1, 1, pattern_size) + 0.2 * np.random.randn(pattern_size)
+        # sigma = 0.2*0.2 = 0.04 (std)
         meds[1,:] = np.linspace(1, -1, pattern_size) + 0.2 * np.random.randn(pattern_size)
         meds[2,:] = 0.1 * np.random.randn(pattern_size)
     elif pattern_type == "freq":
@@ -57,10 +59,11 @@ def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
     elif pattern_type == "freq_c":
         print("Using sinusoidal with predominant frequencies per channel...")
         fft_mag = process_fft(ds.STS, ds.SCS)
-        pred_freq = get_predominant_frequency(fft_mag, mode="per_channel") # shape (freqs, 2) i,e, value, magnitude
-        NUM_WAVES = 3
-        meds = np.empty((NUM_WAVES, pattern_size))
-        for i in range(NUM_WAVES):
+        pred_freq = get_predominant_frequency(fft_mag, mode="per_channel")
+        # shape (freqs, 2) i,e, value, magnitude
+        num_waves = 3
+        meds = np.empty((num_waves, pattern_size))
+        for i in range(num_waves):
             meds[i, :] = np.sin(2*np.pi* pred_freq[i, 0] *np.arange(pattern_size))
     elif pattern_type == "f1":
         meds = np.empty((1, pattern_size))
@@ -93,10 +96,12 @@ def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
         pattern_freq = np.fft.fftfreq(pattern_size)[:pattern_size//2]
         fft_coef = process_fft_frequencies(ds.STS, ds.SCS, pattern_freq)
 
-        if 100 in fft_coef.keys():
+        if 100 in fft_coef:
             del fft_coef[100] # remove the ignore label
 
-        meds = np.zeros((len(fft_coef.keys()), ds.STS.shape[0], pattern_size)) # num_classes, channel, pattern_size
+        meds = np.zeros((len(fft_coef.keys()), ds.STS.shape[0], pattern_size))
+        # num_classes, channel, pattern_size
+
         for i, coef in enumerate(fft_coef.values()):
             for c in range(meds.shape[1]):
                 for j, m in enumerate(pattern_freq):
@@ -107,11 +112,12 @@ def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
         pattern_freq = np.fft.fftfreq(pattern_size)[:pattern_size//2]
         fft_coef = process_fft_frequencies(ds.STS, ds.SCS, pattern_freq)
 
-        if 100 in fft_coef.keys():
+        if 100 in fft_coef:
             del fft_coef[100] # remove the ignore label
 
         # compute variance across classes
-        fft_coef_all = np.zeros((len(fft_coef.keys()), ds.STS.shape[0], pattern_freq.shape[0]), dtype=np.complex128)
+        fft_coef_all = np.zeros(
+            (len(fft_coef.keys()), ds.STS.shape[0], pattern_freq.shape[0]), dtype=np.complex128)
         for i, v in enumerate(fft_coef.values()):
             fft_coef_all[i, :, :] = v
 
@@ -121,10 +127,12 @@ def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
         fft_freq_ordered = pattern_freq[np.argsort(fft_var)] # from lower to higher variance
         fft_coef_mean_sorted = fft_coef_mean[np.argsort(fft_var)] # from lower to higher variance
 
-        NUM_WAVES = 3
-        meds = np.zeros((NUM_WAVES, pattern_size)) # num_classes, channel, pattern_size
-        for i in range(NUM_WAVES):
-            meds[i, :] += fft_coef_mean_sorted[-i].real * np.sin(2*np.pi* fft_freq_ordered[-i] * np.arange(pattern_size))
-            meds[i, :] += fft_coef_mean_sorted[-i].imag * np.cos(2*np.pi* fft_freq_ordered[-i] * np.arange(pattern_size))
+        num_waves = 3
+        meds = np.zeros((num_waves, pattern_size)) # num_classes, channel, pattern_size
+        for i in range(num_waves):
+            meds[i, :] += fft_coef_mean_sorted[-i].real * \
+                np.sin(2*np.pi* fft_freq_ordered[-i] * np.arange(pattern_size))
+            meds[i, :] += fft_coef_mean_sorted[-i].imag * \
+                np.cos(2*np.pi* fft_freq_ordered[-i] * np.arange(pattern_size))
 
     return meds

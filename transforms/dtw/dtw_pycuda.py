@@ -8,6 +8,8 @@ def dtw_fill(dtw, w):
     '''
         dtw of shape (n, k, pattern_len, window_size)
     '''
+    # pylint: disable=unbalanced-tuple-unpacking no-value-for-parameter comparison-with-callable
+
     n, k, len_pattern, len_window = dtw.shape
 
     x, y = cuda.grid(2)
@@ -27,6 +29,8 @@ def dtw_backward(dtw, dist_grad, grad):
         dist_grad of shape (n, k, dims, pattern_len, window_size)
         grad of shape (n, k, dims, pl)
     '''
+    # pylint: disable=unbalanced-tuple-unpacking no-value-for-parameter comparison-with-callable
+
     n, k, d, len_pattern, len_window = dist_grad.shape
 
     x, y = cuda.grid(2)
@@ -45,15 +49,18 @@ def dtw_backward(dtw, dist_grad, grad):
                 if dtw[x, y, i0, j0] != np.inf:
 
                     for l in range(d):
-                        cuda.atomic.add(grad, (x, y, l, i0), dist_grad[x, y, l, i0, j0])      
-              
+                        # pylint: disable=too-many-function-args
+                        cuda.atomic.add(grad, (x, y, l, i0), dist_grad[x, y, l, i0, j0])
+
                     if j0==0 or i0==0:
                         continue
 
-                    if dtw[x, y, i0, j0-1] >= dtw[x, y, i0-1, j0] or dtw[x, y, i0, j0-1] >= dtw[x, y, i0-1, j0-1]: # path is not A
+                    if dtw[x, y, i0, j0-1] >= dtw[x, y, i0-1, j0] or \
+                       dtw[x, y, i0, j0-1] >= dtw[x, y, i0-1, j0-1]: # path is not A
                         for j in range(j0):
                             dtw[x, y, i0, j] = np.inf
-                    if dtw[x, y, i0-1, j0] >= dtw[x, y, i0, j0-1] or dtw[x, y, i0-1, j0] >= dtw[x, y, i0-1, j0-1]: # path is not B
+                    if dtw[x, y, i0-1, j0] >= dtw[x, y, i0, j0-1] or \
+                       dtw[x, y, i0-1, j0] >= dtw[x, y, i0-1, j0-1]: # path is not B
                         for i in range(i0):
                             dtw[x, y, i, j0] = np.inf
 
@@ -81,7 +88,8 @@ def dtw_forward(x: torch.Tensor, y: torch.Tensor, w: float):
     dtw_fill[(16, 16), (16, 16)](cuda.as_cuda_array(euc_d), w)
 
     return euc_d, p_diff
-    
+
+# pylint: disable=invalid-name abstract-method arguments-differ
 class torch_dtw_cuda(torch.autograd.Function):
 
     @staticmethod
@@ -91,13 +99,14 @@ class torch_dtw_cuda(torch.autograd.Function):
         ctx.save_for_backward(DTW, p_diff)
 
         return DTW[:, :, -1, -1]
-    
+
     @staticmethod
     def backward(ctx, dtw_grad):
         # dtw_grad dims (n, k) p_diff dims (n, k, d, pl)
         dtw, p_diff = ctx.saved_tensors
         grads = torch.zeros((dtw.shape[0],) + p_diff.shape[1:-1], device=dtw_grad.device)
-        dtw_backward[(16, 16), (16, 16)](cuda.as_cuda_array(dtw), cuda.as_cuda_array(p_diff), cuda.as_cuda_array(grads))
+        dtw_backward[(16, 16), (16, 16)](
+            cuda.as_cuda_array(dtw), cuda.as_cuda_array(p_diff), cuda.as_cuda_array(grads))
 
         mult = (dtw_grad[:, :, None, None] * grads) # dims (n, k, d)
         return None, mult.mean(0), None # dims (n, d, k)

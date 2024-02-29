@@ -1,14 +1,18 @@
 import torch
 
 @torch.jit.script
-def dtw_compute_full_per_channel(dtw: torch.Tensor, dist_grad: torch.Tensor, dim: int, w: float) -> torch.Tensor:
+def dtw_compute_full_per_channel(
+    dtw: torch.Tensor, dist_grad: torch.Tensor, dim: int, w: float) -> torch.Tensor:
     '''
         dtw of shape (n, k, dims, pattern_len, window_size)
         dist_grad of shape (n, k, dims, pattern_len, window_size)
     '''
-    n, k, d, len_pattern, len_window = dtw.shape
+    # pylint: disable=too-many-locals
+
+    n, k, _, len_pattern, len_window = dtw.shape
     # very big tensor
-    grads = torch.zeros(n, k, dim, len_pattern, len_pattern, len_window, device=dist_grad.device) # shape (n, k, dims, pattern_len, pattern_len, window_size)
+    grads = torch.zeros(n, k, dim, len_pattern, len_pattern, len_window, device=dist_grad.device)
+    # shape (n, k, dims, pattern_len, pattern_len, window_size)
 
     temp = torch.cumsum(dist_grad, dim=4)
     for i in range(len_pattern):
@@ -17,7 +21,8 @@ def dtw_compute_full_per_channel(dtw: torch.Tensor, dist_grad: torch.Tensor, dim
 
     for i in range(1, len_pattern): # pl
         for j in range(1, len_window): # ws
-            value = torch.minimum(w * torch.minimum(dtw[:, :, :, i, j-1], dtw[:, :, :, i-1, j-1]), dtw[:, :, :, i-1, j])
+            value = torch.minimum(w * torch.minimum(
+                dtw[:, :, :, i, j-1], dtw[:, :, :, i-1, j-1]), dtw[:, :, :, i-1, j])
             temp_1 = dtw[:, :, :, i, j-1] < dtw[:, :, :, i-1, j-1] # path (i, j-1) or (i-1, j)
             temp_2 = w * dtw[:, :, :, i, j-1] < dtw[:, :, :, i-1, j] # path (i, j-1) or (i-1, j-1)
             temp_3 = w * dtw[:, :, :, i-1, j-1] < dtw[:, :, :, i-1, j] # path (i-1, j-1) or (i-1, j)
@@ -37,16 +42,19 @@ def dtw_compute_no_grad_per_channel(dtw: torch.Tensor, w: float) -> None:
         grad of shape (n, k, d, dims, pattern_len)
     '''
 
-    n, k, d, len_pattern, len_window = dtw.shape
+    _, _, _, len_pattern, len_window = dtw.shape
 
     for i in range(1, len_pattern): # pl
         for j in range(1, len_window): # ws
-            value = torch.minimum(w * torch.minimum(dtw[:, :, :, i, j-1], dtw[:, :, :, i-1, j-1]), dtw[:, :, :, i-1, j])
+            value = torch.minimum(w * torch.minimum(
+                dtw[:, :, :, i, j-1], dtw[:, :, :, i-1, j-1]), dtw[:, :, :, i-1, j])
 
             dtw[:, :, :, i, j] += value
-    
+
+# pylint: disable=unused-argument
 @torch.jit.script
-def dtw_fast_full_per_channel(x: torch.Tensor, y: torch.Tensor, w: float, eps: float = 1e-5, compute_gradients: bool=True):
+def dtw_fast_full_per_channel(
+    x: torch.Tensor, y: torch.Tensor, w: float, eps: float = 1e-5, compute_gradients: bool=True):
     # shape of x (n, dim, x_len) y (m, y_len)
 
     # performs convolution-like operation, for each kernel, for each dim the DF
@@ -62,31 +70,33 @@ def dtw_fast_full_per_channel(x: torch.Tensor, y: torch.Tensor, w: float, eps: f
     euc_d[:,:,:,:,0] = torch.cumsum(euc_d[:,:,:,:,0], dim=3)
 
     if compute_gradients:
-        # p_diff now contains the partial derivatives of DTW[n, k, i, j] wrt K[k, d, i] (dims (n, k, d, i, j))
+        # p_diff now contains the partial derivatives of
+        # DTW[n, k, i, j] wrt K[k, d, i] (dims (n, k, d, i, j))
         p_diff = torch.where(p_diff < 0, 1.0, -1.0)
-        
+
         grads = dtw_compute_full_per_channel(euc_d, p_diff, x.shape[1], w) # dims (n, k, d, i, i, j)
-        
+
         return euc_d.sqrt(), grads
-    else:
-        dtw_compute_no_grad_per_channel(euc_d, w)
 
-        return euc_d.sqrt(), None
+    dtw_compute_no_grad_per_channel(euc_d, w)
 
+    return euc_d.sqrt(), None
+
+# pylint: disable=invalid-name abstract-method arguments-differ
 class torch_dtw_per_channel(torch.autograd.Function):
 
     @staticmethod
     def forward(x: torch.Tensor, y: torch.Tensor, w: float):
         DTW, p_diff = dtw_fast_full_per_channel(x, y, w, compute_gradients=y.requires_grad)
         return DTW, p_diff
-    
+
     @staticmethod
-    def setup_context(ctx, inputs, output):
-        DTW, p_diff = output
+    def setup_context(ctx, _, output):
+        _, p_diff = output
         ctx.save_for_backward(p_diff)
-    
+
     @staticmethod
-    def backward(ctx, dtw_grad, p_diff_grad):
+    def backward(ctx, dtw_grad, _):
         # dtw_grad dims (n, k, d, i, j) p_diff dims (n, k, d, i, i, j)
         p_diff, = ctx.saved_tensors
         mult = (p_diff * dtw_grad[:, :, :, :, None, :]) # dims (n, k, d, i, i, j)
