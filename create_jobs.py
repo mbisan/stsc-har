@@ -29,7 +29,7 @@ source activate dev2
     for args in args_list:
         job += f"\npython {args.command} {get_command(args)}"
 
-    return modelname, jobname, job
+    return jobname, job
 
 class EmptyExperiment:
     pass
@@ -68,37 +68,36 @@ def produce_experiments(args):
         else:
             for experiment_arg in experiment_arguments:
                 setattr(experiment_arg, key, value)
-    
+
     jobs = []
 
-    cache_dir = os.path.join("./", experiment_arguments[0].training_dir, "cache_jobs")
-    if not os.path.exists(os.path.dirname(cache_dir)):
-        os.mkdir(os.path.dirname(cache_dir))
-    if not os.path.exists(cache_dir):
-        os.mkdir(cache_dir)
+    save_dir = os.path.join("./", experiment_arguments[0].training_dir, "cache_jobs")
+    if not os.path.exists(os.path.dirname(save_dir)):
+        os.mkdir(os.path.dirname(save_dir))
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
 
-    print("Saving experiments to", cache_dir)
+    print("Saving experiments to", save_dir)
 
-    EXPS_PER_JOB = 4
-    for i in range(0, len(experiment_arguments), EXPS_PER_JOB):
-        modelname, jobname, job = create_jobs(experiment_arguments[i:min(i+EXPS_PER_JOB, len(experiment_arguments))])
+    exps_per_job = 4
+    for i in range(0, len(experiment_arguments), exps_per_job):
+        last = min(i+exps_per_job, len(experiment_arguments))
+        jobname, job = create_jobs(experiment_arguments[i:last])
         jobname += f"{i}.job"
         jobs.append("sbatch " + jobname)
-        with open(os.path.join(cache_dir, jobname), "w") as f:
-            f.write(job)
+        with open(os.path.join(save_dir, jobname), "w", encoding="utf-8") as file:
+            file.write(job)
 
     print("Created", len(jobs), "jobs")
 
-    return jobs, cache_dir
+    return jobs, save_dir
 
 if __name__ == "__main__":
-    for exp in experiments:
-        jobs, cache_dir = produce_experiments({**baseArguments, **exp})
-    
-        bash_script = "#!\\bin\\bash\n" + "\n".join(jobs)
-        
-        with open(os.path.join(cache_dir, "launch.sh"), "w") as f:
-            f.write(bash_script)
+    for exp_args in experiments:
+        all_jobs, cache_dir = produce_experiments({**baseArguments, **exp_args})
 
-        print(f"Number of experiments created: {len(jobs)}")
+        with open(os.path.join(cache_dir, "launch.sh"), "w", encoding="utf-8") as f:
+            f.write("#!\\bin\\bash\n" + "\n".join(all_jobs)) # bash script
+
+        print(f"Number of experiments created: {len(all_jobs)}")
         print("launch.sh file at", cache_dir)
