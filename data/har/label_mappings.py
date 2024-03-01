@@ -45,7 +45,7 @@ UCI_HAR_LABELS = {
     3: "WALKING_DOWNSTAIRS",
     4: "SITTING",
     5: "STANDING",
-    6: "LAYING",          
+    6: "LAYING",
     7: "STAND_TO_SIT",
     8: "SIT_TO_STAND",
     9: "SIT_TO_LIE",
@@ -64,7 +64,7 @@ MHEALTH_LABELS = {
     3: "Lying",
     4: "Walking",
     5: "Climb stairs",
-    6: "Waist bends forward",          
+    6: "Waist bends forward",
     7: "Frontal elevation of arms",
     8: "Knees bending (crouch)",
     9: "Cycling",
@@ -101,19 +101,23 @@ PAMAP2_LABELS = {
 }
 
 pamap2_label_mapping = np.array(
-    [100, 0, 1, 2, 3, 4, 5, 6, -1, 7, 8, 9, 10, 11, -1, -1, 12, 13, 14, 15, 16, -1, -1, -1, 17], dtype=np.int64)
+    [100, 0, 1, 2, 3, 4, 5, 6, -1, 7, 8, 9, 10,
+    11, -1, -1, 12, 13, 14, 15, 16, -1, -1, -1, 17], dtype=np.int64)
 
 pamap2_basic_activity_recognition = np.array(
     [100, 0, 1, 1, 2, 3, 4, 100, # up to nordic walking, label "other": 5
-      -1, 100, 100, 100, 100, 100, -1, -1, 100, 100, 100, 100, 100, -1, -1, -1, 100], dtype=np.int64)
+    -1, 100, 100, 100, 100, 100, -1, -1,
+    100, 100, 100, 100, 100, -1, -1, -1, 100], dtype=np.int64)
 
 pamap2_background_activity_recognition = np.array(
     [100, 0, 1, 1, 2, 3, 4, 5, # up to nordic walking, label "other": 5
-      -1, 100, 100, 100, 5, 5, -1, -1, 5, 5, 100, 100, 100, -1, -1, -1, 5], dtype=np.int64)
+    -1, 100, 100, 100, 5, 5, -1, -1,
+    5, 5, 100, 100, 100, -1, -1, -1, 5], dtype=np.int64)
 
 pamap2_all_activity_recognition = np.array(
     [100, 0, 1, 2, 3, 4, 5, 6, # up to nordic walking, label "other": 5
-      -1, 100, 100, 100, 7, 8, -1, -1, 9, 10, 100, 100, 100, -1, -1, -1, 11], dtype=np.int64)
+    -1, 100, 100, 100, 7, 8, -1, -1, 9,
+    10, 100, 100, 100, -1, -1, -1, 11], dtype=np.int64)
 
 if __name__ == "__main__":
     for i, val in PAMAP2_LABELS.items():

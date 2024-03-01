@@ -5,6 +5,8 @@ from data.base import STSDataset
 
 # Load datasets predefined
 
+# pylint: disable=invalid-name too-many-arguments too-many-locals
+
 class UCI_HARDataset(STSDataset):
 
     def __init__(self,
@@ -14,8 +16,6 @@ class UCI_HARDataset(STSDataset):
             normalize: bool = True,
             label_mapping: np.ndarray = None
             ) -> None:
-        super().__init__(wsize=wsize, wstride=wstride)
-
         '''
             UCI-HAR dataset handler
 
@@ -25,11 +25,12 @@ class UCI_HARDataset(STSDataset):
                 wsize: window size
                 wstride: window stride
         '''
+        super().__init__(wsize=wsize, wstride=wstride)
 
         # load dataset
         files = os.listdir(os.path.join(dataset_dir, "processed"))
         files.sort()
-        
+
         splits = [0]
         self.subject_indices = [0]
 
@@ -46,7 +47,8 @@ class UCI_HARDataset(STSDataset):
 
                 sensor_data = np.load(os.path.join(dataset_dir, "processed", f, s))
                 STS.append(sensor_data)
-                label_data = np.load(os.path.join(dataset_dir, "processed", f, s.replace("sensor", "label")))
+                label_data = np.load(
+                    os.path.join(dataset_dir, "processed", f, s.replace("sensor", "label")))
                 SCS.append(label_data)
 
                 splits.append(splits[-1] + sensor_data.shape[0])
@@ -80,8 +82,6 @@ class HARTHDataset(STSDataset):
             normalize: bool = True,
             label_mapping: np.ndarray = None
             ) -> None:
-        super().__init__(wsize=wsize, wstride=wstride)
-
         '''
             HARTH dataset handler
 
@@ -91,6 +91,7 @@ class HARTHDataset(STSDataset):
                 wsize: window size
                 wstride: window stride
         '''
+        super().__init__(wsize=wsize, wstride=wstride)
 
         # load dataset
         files = list(filter(
@@ -98,7 +99,7 @@ class HARTHDataset(STSDataset):
             os.listdir(os.path.join(dataset_dir, "harth")))
         )
         files.sort()
-        
+
         splits = [0]
 
         self.subject_indices = [0]
@@ -148,8 +149,6 @@ class WISDMDataset(STSDataset):
             normalize: bool = True,
             label_mapping: np.ndarray = None
             ) -> None:
-        super().__init__(wsize=wsize, wstride=wstride)
-
         '''
             WISDM dataset handler
 
@@ -159,6 +158,7 @@ class WISDMDataset(STSDataset):
                 wsize: window size
                 wstride: window stride
         '''
+        super().__init__(wsize=wsize, wstride=wstride)
 
         # load dataset
         files = list(filter(
@@ -166,7 +166,7 @@ class WISDMDataset(STSDataset):
             os.listdir(os.path.join(dataset_dir)))
         )
         files.sort()
-        
+
         splits = [0]
 
         STS = []
@@ -203,10 +203,8 @@ class MHEALTHDataset(STSDataset):
             wstride: int = 1,
             normalize: bool = True,
             label_mapping: np.ndarray = None,
-            location: list[str] = ["chest", "ankle", "arm"]
+            location: tuple[str] = ("chest", "ankle", "arm")
             ) -> None:
-        super().__init__(wsize=wsize, wstride=wstride)
-
         '''
             MHEALTH dataset handler
 
@@ -218,6 +216,7 @@ class MHEALTHDataset(STSDataset):
                 location: Sensor location, "chest", "ECG", "ankle", "arm" 
                 (ECG is technically not a location, but it differs in type of sensor too much) 
         '''
+        super().__init__(wsize=wsize, wstride=wstride)
 
         # load dataset
         subject_dir = list(filter(
@@ -225,7 +224,7 @@ class MHEALTHDataset(STSDataset):
             os.listdir(os.path.join(dataset_dir)))
         )
         subject_dir.sort()
-        
+
         splits = [0]
         self.subject_indices = [0]
 
@@ -245,7 +244,7 @@ class MHEALTHDataset(STSDataset):
 
             for s in segments:
                 sensor_data.append(np.load(os.path.join(dataset_dir, subject, s)))
-            STS.append(np.concatenate(sensor_data, axis=1))            
+            STS.append(np.concatenate(sensor_data, axis=1))
 
             splits.append(splits[-1] + label_data.shape[0])
 
@@ -278,11 +277,10 @@ class PAMAP2Dataset(STSDataset):
             wstride: int = 1,
             normalize: bool = True,
             label_mapping: np.ndarray = None,
-            location: list[str] = ["chest", "ankle", "hand"],
-            sensor_type: list[str] = ["acc_16g", "acc_6g", "gyro", "mag", "orientation", "temp", "HR"]
+            location: tuple[str] = ("chest", "ankle", "hand"),
+            sensor_type: tuple[str] = ("acc_16g", "acc_6g", "gyro",
+                                       "mag", "orientation", "temp", "HR")
             ) -> None:
-        super().__init__(wsize=wsize, wstride=wstride)
-
         '''
             PAMAP2 dataset handler
 
@@ -294,6 +292,7 @@ class PAMAP2Dataset(STSDataset):
                 sensor_type: "acc_16g", "acc_6g", "gyro", "mag", "orientation", "temp", "HR"
                 location: "chest", "ankle", "hand"
         '''
+        super().__init__(wsize=wsize, wstride=wstride)
 
         # load dataset
         subject_dir = list(filter(
@@ -301,8 +300,10 @@ class PAMAP2Dataset(STSDataset):
             os.listdir(os.path.join(dataset_dir)))
         )
         subject_dir.sort()
-        
-        condition = lambda x: any([loc in x for loc in location]) and any([ty in x for ty in sensor_type])
+
+        # pylint: disable=unnecessary-lambda-assignment use-a-generator
+        condition = \
+            lambda x: any([loc in x for loc in location]) and any([ty in x for ty in sensor_type])
 
         splits = [0]
         self.subject_indices = [0]
@@ -323,7 +324,7 @@ class PAMAP2Dataset(STSDataset):
             # print(os.path.join(dataset_dir, subject, "label0.npy"))
             for s in exp1:
                 sensor_data.append(np.load(os.path.join(dataset_dir, subject, s)))
-            STS.append(np.concatenate(sensor_data, axis=1))            
+            STS.append(np.concatenate(sensor_data, axis=1))
 
             splits.append(splits[-1] + label_data.shape[0])
 
@@ -341,7 +342,7 @@ class PAMAP2Dataset(STSDataset):
 
                 for s in exp2:
                     sensor_data.append(np.load(os.path.join(dataset_dir, subject, s)))
-                STS.append(np.concatenate(sensor_data, axis=1))            
+                STS.append(np.concatenate(sensor_data, axis=1))
 
                 splits.append(splits[-1] + label_data.shape[0])
 

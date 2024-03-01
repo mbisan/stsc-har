@@ -4,8 +4,7 @@ from time import time
 import json
 import subprocess
 
-import warnings # shut up warnings
-warnings.simplefilter("ignore", category=UserWarning)
+import warnings
 
 from pytorch_lightning import seed_everything
 import numpy as np
@@ -16,6 +15,9 @@ from utils.methods import train_model, PLKWargs, MetricsSetting
 from utils.arguments import get_parser, get_model_name
 
 from nets.wrapper import DFWrapper, SegWrapper, ContrastiveWrapper, AutoencoderWrapper
+
+# shut up warnings
+warnings.simplefilter("ignore", category=UserWarning)
 
 def main(args):
     dm = load_dm(args)

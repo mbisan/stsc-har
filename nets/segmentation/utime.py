@@ -8,20 +8,22 @@ Processing Systems (NeurIPS 2019)
 
 Adapted for pytorch from https://github.com/perslev/U-Time/
 """
-import logging
-import numpy as np
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 from typing import Tuple
 from collections import OrderedDict
 
+import numpy as np
+
+import torch
+from torch import nn
+import torch.nn.functional as F
+
 class UTimeDecoder(nn.Module):
 
+    # pylint: disable=too-many-arguments
+
     def __init__(
-        self, 
+        self,
         res_channels,
         pools,
         depth,
@@ -38,25 +40,31 @@ class UTimeDecoder(nn.Module):
         for i in range(depth):
             filters = int(filters/2)
             setattr(self, f"decoder_0_{i}", nn.Sequential(OrderedDict([
-                ("conv", nn.Conv1d(res_channels[-(i+1)], int(filters*complexity_factor), kernel_size=kernel_size, 
+                ("conv", nn.Conv1d(
+                    res_channels[-(i+1)], int(filters*complexity_factor),
+                    kernel_size=kernel_size,
                     padding=padding)),
                 ("activation", nn.ReLU()),
                 ("bn", nn.BatchNorm1d(int(filters*complexity_factor))),
             ])))
 
             setattr(self, f"decoder_1_{i}", nn.Sequential(OrderedDict([
-                ("conv0", nn.Conv1d(res_channels[-(i+1)] + int(filters*complexity_factor), int(filters*complexity_factor), kernel_size=kernel_size, 
+                ("conv0", nn.Conv1d(
+                    res_channels[-(i+1)] + int(filters*complexity_factor),
+                    int(filters*complexity_factor), kernel_size=kernel_size,
                     padding=padding)),
                 ("activation0", nn.ReLU()),
                 ("bn0", nn.BatchNorm1d(int(filters*complexity_factor))),
-                ("conv1", nn.Conv1d(int(filters*complexity_factor), int(filters*complexity_factor), kernel_size=kernel_size, 
+                ("conv1", nn.Conv1d(
+                    int(filters*complexity_factor),
+                    int(filters*complexity_factor), kernel_size=kernel_size,
                     padding=padding)),
                 ("activation1", nn.ReLU()),
                 ("bn1", nn.BatchNorm1d(int(filters*complexity_factor))),
             ])))
 
         self.filters = filters
-    
+
     def forward(self, x, residual_conn):
 
         for i in range(self.depth):
@@ -64,13 +72,15 @@ class UTimeDecoder(nn.Module):
             x = getattr(self, f"decoder_0_{i}")(x)
             x = torch.cat([residual_conn[-(i+1)], x], dim=1)
             x = getattr(self, f"decoder_1_{i}")(x)
-        
+
         return x
 
 class UTimeEncoder(nn.Module):
 
+    # pylint: disable=too-many-arguments
+
     def __init__(
-        self, 
+        self,
         in_channels,
         depth,
         pools,
@@ -83,11 +93,14 @@ class UTimeEncoder(nn.Module):
         super().__init__()
 
         setattr(self, "encoder0", nn.Sequential(OrderedDict([
-            ("conv0", nn.Conv1d(in_channels, int(filters*complexity_factor), kernel_size=kernel_size, 
+            ("conv0", nn.Conv1d(
+                in_channels, int(filters*complexity_factor), kernel_size=kernel_size,
                 padding=padding, dilation=dilation)),
             ("activation0", nn.ReLU()),
             ("bn0", nn.BatchNorm1d(int(filters*complexity_factor))),
-            ("conv1", nn.Conv1d(int(filters*complexity_factor), int(filters*complexity_factor), kernel_size=kernel_size, 
+            ("conv1", nn.Conv1d(
+                int(filters*complexity_factor), int(filters*complexity_factor),
+                kernel_size=kernel_size,
                 padding=padding, dilation=dilation)),
             ("activation1", nn.ReLU()),
             ("bn1", nn.BatchNorm1d(int(filters*complexity_factor))),
@@ -100,11 +113,15 @@ class UTimeEncoder(nn.Module):
         for i in range(1, depth):
             filters *= 2
             setattr(self, f"encoder{i}", nn.Sequential(OrderedDict([
-                ("conv0", nn.Conv1d(self.res_channels[-1], int(filters*complexity_factor), kernel_size=kernel_size, 
+                ("conv0", nn.Conv1d(
+                    self.res_channels[-1], int(filters*complexity_factor),
+                    kernel_size=kernel_size,
                     padding=padding, dilation=dilation)),
                 ("activation0", nn.ReLU()),
                 ("bn0", nn.BatchNorm1d(int(filters*complexity_factor))),
-                ("conv1", nn.Conv1d(int(filters*complexity_factor), int(filters*complexity_factor), kernel_size=kernel_size, 
+                ("conv1", nn.Conv1d(
+                    int(filters*complexity_factor), int(filters*complexity_factor),
+                    kernel_size=kernel_size,
                     padding=padding, dilation=dilation)),
                 ("activation1", nn.ReLU()),
                 ("bn1", nn.BatchNorm1d(int(filters*complexity_factor))),
@@ -112,7 +129,7 @@ class UTimeEncoder(nn.Module):
             self.res_channels += [int(filters*complexity_factor)]
 
         self.filters = filters
-    
+
     def forward(self, x):
         out = [None for i in range(self.depth)]
         out[0] = self.encoder0(x)
@@ -126,6 +143,9 @@ class UTime(nn.Module):
     """
     See also original U-net paper at http://arxiv.org/abs/1505.04597
     """
+
+    # pylint: disable=too-many-arguments too-many-instance-attributes
+
     def __init__(self,
         n_classes: int,
         in_dims: int,
@@ -192,7 +212,7 @@ class UTime(nn.Module):
         if len(self.pools) != self.depth:
             raise ValueError("Argument 'pools' must be a single integer or a "
                              "list of values of length equal to 'depth'.")
-        
+
         self.padding = padding.lower()
         if self.padding != "same":
             raise ValueError("Currently, must use 'same' padding.")
@@ -218,16 +238,21 @@ class UTime(nn.Module):
             self.cf
         )
 
-        self.project = nn.Conv1d(in_channels=int(self.decoder.filters*self.cf), out_channels=self.n_classes, kernel_size=1, padding="same")
+        self.project = nn.Conv1d(
+            in_channels=int(self.decoder.filters*self.cf), out_channels=self.n_classes,
+            kernel_size=1, padding="same")
 
         self.change_size = change_size
         self.segment_size = segment_size
 
-        self.project2 = nn.Conv1d(in_channels=self.n_classes, out_channels=self.n_classes, kernel_size=change_size, padding="same")
+        self.project2 = nn.Conv1d(
+            in_channels=self.n_classes, out_channels=self.n_classes,
+            kernel_size=change_size, padding="same")
 
     def forward(self, x):
         x, low_feats = self.encoder(x)
         x = self.decoder(x, low_feats)
         x = self.project(x)
+        # pylint: disable=not-callable
         x = F.avg_pool1d(x, kernel_size=self.segment_size)
         return self.project2(x).repeat_interleave(self.segment_size, dim=-1)

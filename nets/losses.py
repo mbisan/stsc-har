@@ -89,7 +89,7 @@ class SupConLoss(nn.Module):
             anchor_feature = contrast_feature
             anchor_count = contrast_count
         else:
-            raise ValueError('Unknown mode: {}'.format(self.contrast_mode))
+            raise ValueError(f'Unknown mode: {self.contrast_mode}')
 
         # compute logits
         anchor_dot_contrast = torch.div(
@@ -116,11 +116,11 @@ class SupConLoss(nn.Module):
 
         # compute mean of log-likelihood over positive
         # modified to handle edge cases when there is no positive pair
-        # for an anchor point. 
-        # Edge case e.g.:- 
+        # for an anchor point.
+        # Edge case e.g.:-
         # features of shape: [4,1,...]
         # labels:            [0,1,1,2]
-        # loss before mean:  [nan, ..., ..., nan] 
+        # loss before mean:  [nan, ..., ..., nan]
         mask_pos_pairs = mask.sum(1)
         mask_pos_pairs = torch.where(mask_pos_pairs < 1e-6, 1, mask_pos_pairs)
         mean_log_prob_pos = (mask * log_prob).sum(1) / mask_pos_pairs
@@ -130,15 +130,15 @@ class SupConLoss(nn.Module):
         loss = loss.view(anchor_count, batch_size).mean()
 
         return loss
-    
+
 class ContrastiveDist(nn.Module):
 
     def __init__(self, epsilon: float = 1e-6, m: float = 10.0) -> None:
-        
+
         super().__init__()
 
         self.epsilon = epsilon
-        self.M = m
+        self.m = m
 
     def forward(self, features, labels):
         '''
@@ -152,8 +152,9 @@ class ContrastiveDist(nn.Module):
 
             Loss to minimize:
 
-            Sum_i { 
-                ReLu(Mean_{j in A(i)} { dis(x_i, x_j) } // relu ensures that elements less than 0 don't propagate gradients
+            Sum_i {
+                // relu ensures that elements less than 0 don't propagate gradients
+                ReLu(Mean_{j in A(i)} { dis(x_i, x_j) }
                 - Mean_{j in B(i)} { dis(x_i, x_j)  + M)}
             }
         '''
@@ -169,7 +170,7 @@ class ContrastiveDist(nn.Module):
         w = equal/(counts + self.epsilon) - ~equal/(labels.shape[0]-counts-1 + self.epsilon)
         w[torch.arange(w.shape[0]), torch.arange(w.shape[0])] = 0
 
-        loss = (w*ed).sum(1) + self.M
+        loss = (w*ed).sum(1) + self.m
 
         loss_valid = loss[counts.squeeze()!=0]
 
@@ -178,21 +179,22 @@ class ContrastiveDist(nn.Module):
 class TripletLoss(nn.Module):
 
     def __init__(self, epsilon: float = 1e-6, m: float = 2.0) -> None:
-        
+
         super().__init__()
 
         self.epsilon = epsilon
-        self.M = m
+        self.m = m
 
-    def forward(self, features, labels):
+    def forward(self, features, _):
         '''
             features has shape (n, 3, d)
             labels has shape (n) (not used)
 
             Loss to minimize:
 
-            Mean_i { 
-                ReLu( dis(x_i_0, x_i_1) // relu ensures that elements less than 0 don't propagate gradients
+            Mean_i {
+                // relu ensures that elements less than 0 don't propagate gradients
+                ReLu( dis(x_i_0, x_i_1)
                 - dis(x_i_0, x_i_2)  + M)
             }
         '''
@@ -203,6 +205,6 @@ class TripletLoss(nn.Module):
         maximize = (features[:, 0, :] - features[:, 1, :]).square().sum(dim=-1) # shape n
         minimize = (features[:, 0, :] - features[:, 2, :]).square().sum(dim=-1) # shape n
 
-        loss_parts = (maximize + self.epsilon).sqrt() - (minimize + self.epsilon).sqrt() + self.M
+        loss_parts = (maximize + self.epsilon).sqrt() - (minimize + self.epsilon).sqrt() + self.m
 
         return torch.nn.functional.relu(loss_parts).mean()

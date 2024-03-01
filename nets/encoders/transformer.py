@@ -26,7 +26,7 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(1), :]
         return self.dropout(x)
 
-class TimeSeriesTransformer(nn.Module): 
+class TimeSeriesTransformer(nn.Module):
     def __init__(self,
         in_dimensions: int,
         latent_dims: int,
@@ -73,14 +73,14 @@ class TimeSeriesTransformer(nn.Module):
         src = src.mean(dim=1) # (n, t, latent) -> (n, latent)
 
         return src
-    
-# channels, ref_size, 
+
+# channels, ref_size,
 #             wdw_size, n_feature_maps
-    
+
 class Transformer(nn.Module):
-    def __init__(self, channels, ref_size, 
+    def __init__(self, channels, ref_size,
             wdw_size, n_feature_maps):
-        
+
         super().__init__()
 
         self.channels = channels
@@ -103,7 +103,7 @@ class Transformer(nn.Module):
         x: torch.Tensor = self(x)
         print("Latent shape: ", x.shape)
         return x.shape
-    
+
     def forward(self, x):
         mask = generate_square_subsequent_mask(x.shape[-1], x.shape[-1]).to(x.device)
         x = x.permute((0, 2, 1))

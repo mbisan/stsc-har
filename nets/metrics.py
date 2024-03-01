@@ -1,5 +1,7 @@
 import torch
 
+# pylint: disable=invalid-name
+
 def metrics_from_cm(cm):
     TP = cm.diag()
     FP = cm.sum(0) - TP
@@ -19,7 +21,7 @@ def metrics_from_cm(cm):
 def print_cm(cm, num_classes):
     cm=cm/cm.sum(1, keepdim=True)
     print("       ", "".join([f"Pr {i:>2} " for i in range(num_classes)]))
-    print("-------------------------------------------------------------------------------------------------------")
+    print("-"*120)
     for i in range(num_classes):
         print(f"True {i:>2}|", end="")
         for j in range(num_classes):
@@ -50,13 +52,13 @@ def group_classes(cm, groups):
 
     new_cm[:k, :k] = cm[n_groups_all][:, n_groups_all]
 
-    for i, g in enumerate(groups):
-        new_cm[k+i, k+i] = cm[groups[i]][:, groups[i]].sum()
-        new_cm[:k, k+i] = cm[n_groups_all][:, groups[i]].sum(1)
-        new_cm[k+i, :k] = cm.T[n_groups_all][:, groups[i]].sum(1)
+    for i, g0 in enumerate(groups):
+        new_cm[k+i, k+i] = cm[g0][:, g0].sum()
+        new_cm[:k, k+i] = cm[n_groups_all][:, g0].sum(1)
+        new_cm[k+i, :k] = cm.T[n_groups_all][:, g0].sum(1)
 
-        for j in range(len(groups)):
+        for j, g1 in enumerate(groups):
             if i!=j:
-                new_cm[k+i, k+j] = cm[groups[i]][:, groups[j]].sum()
+                new_cm[k+i, k+j] = cm[g0][:, g1].sum()
 
     return new_cm
