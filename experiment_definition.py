@@ -30,7 +30,9 @@ baseArguments = {
     "cached": False,
     "ram": 8,
     "cpus": 8,
-    "rho": 0
+    "rho": 0,
+    "reduce_imbalance": True,
+    "normalize": True
 }
 
 harth_ts = {

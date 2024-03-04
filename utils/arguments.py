@@ -115,40 +115,17 @@ def get_model_name(args):
 
 
 def get_command(args):
-    command = f"--mode {args.mode} --dataset {args.dataset} --lr {args.lr} " + \
-                "--subjects_for_test " + \
-                ' '.join([str(subject) for subject in args.subjects_for_test]) + " " \
-                f"--window_size {args.window_size} --window_stride {args.window_stride} " + \
-                f"--batch_size {args.batch_size} " + \
-                f"--encoder_architecture {args.encoder_architecture} " + \
-                f"--encoder_features {args.encoder_features} " + \
-                f"--decoder_architecture {args.decoder_architecture} " + \
-                f"--decoder_features {args.decoder_features} " + \
-                f"--decoder_layers {args.decoder_layers} " + \
-                (f"--label_mode {args.label_mode} " if args.label_mode > 1 else "") + \
-                (f"--voting {args.voting} --rho {args.rho} " if args.voting > 1 else "") + \
-                (f"--overlap {args.overlap} " if args.overlap >= 0 else "")
+    command = ""
 
-    if args.mode in ["img", "dtw", "dtw_c"]:
-        command += f"--pattern_size {args.pattern_size} --rho {args.rho} "
-    if args.mode == "img":
-        command += f"--compute_n {args.compute_n} "
-        command += f"--pattern_type {args.pattern_type} "
-        command += f"--num_medoids {args.num_medoids} " if args.pattern_type == "med" else ""
-    if args.mode == "mtf":
-        command += f"--mtf_bins {args.mtf_bins} "
-    if args.mode == "seg":
-        command += f"--cf {args.cf} --pattern_size {args.pattern_size} --pooling " + \
-            ' '.join([str(subject) for subject in args.pooling]) + " "
-
-    command += f"--num_workers {args.num_workers} --max_epochs {args.max_epochs} " + \
-        "--normalize --reduce_imbalance "
-    command += f"--training_dir {args.training_dir} --n_val_subjects {args.n_val_subjects} "
-    command += "--cached " if args.cached else ""
-    command += f"--weight_decayL1 {args.weight_decayL1} "
-    command += f"--weight_decayL2 {args.weight_decayL2} "
-
-    if args.__dict__.get("same_class", False):
-        command += "--same_class "
+    for element, value in args.__dict__.items():
+        if element in ["command", "ram", "cpus"]:
+            continue
+        if isinstance(value, bool):
+            command += f"--{element} "
+        elif isinstance(value, list):
+            command += f"--{element} " 
+            command += ' '.join([str(subject) for subject in args.subjects_for_test]) + " "
+        else:
+            command += f"--{element} {value} "
 
     return command
