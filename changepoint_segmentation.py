@@ -14,8 +14,8 @@ from nets.wrapper import ContrastiveWrapper, DFWrapper
 from nets.metrics import print_cm, metrics_from_cm
 
 
-CPMODEL_CP = "_tests/clr_UCI-HAR_21-20-19-18-17_4_40_1_bs128_lr0.001_l10_l20_cnn_gap_ts20_cnn_ts_decNone_1/version_1/checkpoints/epoch=18-step=7201-val_re=0.0000.ckpt"
-CLASS_CP = "_window_classifier/ts_UCI-HAR_21-20-19-18-17_4_50_1_bs128_lr0.001_l10_l20_cnn_gap_ts32_mlp32_1_v1_0.1/version_0/checkpoints/epoch=13-step=5222-val_re=0.7381.ckpt"
+CPMODEL_CP = "_uci_clr_cpmodel/clr_UCI-HAR_29_4_40_1_bs128_lr0.001_l10.0001_l21e-05_cnn_gap_ts10_cnn_ts_dec0_0_decay1/version_0/checkpoints/epoch=17-step=7956-val_re=0.0000.ckpt"
+CLASS_CP = "_uci_seg_class/ts_UCI-HAR_29_4_50_1_bs128_lr0.001_l10.0001_l21e-05_cnn_gap_ts24_mlp32_1/version_0/checkpoints/epoch=15-step=6560-val_re=0.7327.ckpt"
 
 parser = get_parser()
 args = parser.parse_args('''
@@ -97,8 +97,18 @@ sts = dm.stsds.STS[:, dm.stsds.indices[dm.ds_test.indices]]
 
 cp_ = [0] + change_points + [classes.shape[0]]
 
+j=0
+while j<len(cp_)-1:
+    if cp_[j+1]-cp_[j]<16:
+        new_id = int((cp_.pop(j) + cp_.pop(j))/2)
+        cp_.insert(j, new_id)
+    j+=1
+
+cp_[0] = 0
+cp_[-1] = classes.shape[0]
+
 out_repeated = []
-for j in range(len(change_points)+1):
+for j in range(len(cp_)-1):
     out = classifier(sts[None, :, cp_[j]:cp_[j+1]])
     out_repeated.append(out.squeeze().argmax(-1).repeat(cp_[j+1]-cp_[j]))
 

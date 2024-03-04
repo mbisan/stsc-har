@@ -29,7 +29,8 @@ baseArguments = {
     "command": "training.py",
     "cached": False,
     "ram": 8,
-    "cpus": 8
+    "cpus": 8,
+    "rho": 0
 }
 
 harth_ts = {
@@ -271,6 +272,36 @@ wisdm_seg = {
     "batch_size": 64
 }
 
-experiments = [harth_ts, harth_img, harth_tr, harth_seg, harth_img_g,
-               uci_ts, uci_img, uci_tr, uci_seg,
-               wisdm_ts, wisdm_img, wisdm_tr, wisdm_seg]
+uci_clr = {
+    "dataset": "UCI-HAR",
+    "subjects_for_test": cross_validate["UCI-HAR"],
+    "window_size": 40,
+    "window_stride": 1,
+    "mode": "clr",
+    "encoder_architecture": "cnn_gap_ts",
+    "encoder_features": 10,
+    "decoder_architecture": "cnn_ts_dec", # not used
+    "decoder_features": 0, # not used
+    "decoder_layers": 0, # not used
+    "max_epochs": 30,
+    "training_dir": "_uci_clr_cpmodel",
+    "cf": 0,
+}
+
+uci_seg_class = {
+    "dataset": "UCI-HAR",
+    "subjects_for_test": cross_validate["UCI-HAR"],
+    "window_size": 50,
+    "window_stride": 1,
+    "mode": "ts",
+    "encoder_architecture": "cnn_gap_ts",
+    "encoder_features": 24,
+    "decoder_architecture": "mlp",
+    "decoder_features": 32,
+    "decoder_layers": 1,
+    "max_epochs": 30,
+    "training_dir": "_uci_seg_class",
+    "same_class": True
+}
+
+experiments = [uci_clr, uci_seg_class]
