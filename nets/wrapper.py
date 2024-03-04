@@ -381,7 +381,7 @@ class AutoencoderWrapper(BaseWrapper):
 
         self.dissimilarities = None
         self.labels_ = None
-        self.rpr = None
+        self.rpr = []
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.encoder(x)
@@ -398,6 +398,7 @@ class AutoencoderWrapper(BaseWrapper):
         reconstruction_error = diff.square().sum(dim=(-2, -1))
 
         if stage != "train":
+            self.rpr.append(output["latent"])
             self.probabilities.append(reconstruction_error) # save the reconstruction difference
             # from batch["scs"] we can extract if there is a change point in the window
             # by simply checking how many unique labels are there in the window

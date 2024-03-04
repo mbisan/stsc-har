@@ -44,7 +44,7 @@ def main(args):
         model = AutoencoderWrapper(
             args.encoder_architecture, dm.n_dims, args.encoder_features, args.decoder_architecture,
             args.lr, args.weight_decayL1, args.weight_decayL2, args.cf, modelname, args.window_size,
-            monitor="val_loss"
+            monitor="val_loss", optimizer_mode="min"
         )
         modeltype = AutoencoderWrapper
     else:
@@ -69,7 +69,7 @@ def main(args):
     print("\n" + "Start training:")
     model, data = train_model(dm, model, max_epochs=args.max_epochs,
         pl_kwargs=PLKWargs(args.training_dir, "auto", 42),
-        metrics=MetricsSetting(model.monitor, "max"), modeltype=modeltype)
+        metrics=MetricsSetting(model.monitor, model.optimizer_mode), modeltype=modeltype)
 
     data = {
         **data,
