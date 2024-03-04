@@ -280,7 +280,7 @@ uci_clr = {
     "window_size": 40,
     "window_stride": 1,
     "mode": "clr",
-    "encoder_architecture": "cnn_gap_ts",
+    "encoder_architecture": "cnn_ts",
     "encoder_features": 10,
     "decoder_architecture": "cnn_ts_dec", # not used
     "decoder_features": 0, # not used
