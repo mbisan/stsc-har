@@ -7,7 +7,7 @@ from torch import nn
 
 class CNN_TS(torch.nn.Module):
 
-    def __init__(self, channels=1, _=32,
+    def __init__(self, channels=1, ref_size=32,
             wdw_size=32, n_feature_maps=32):
         super().__init__()
 
@@ -15,6 +15,7 @@ class CNN_TS(torch.nn.Module):
         self.channels = channels
         self.wdw_size = wdw_size
         self.n_feature_maps = n_feature_maps
+        self.ref_size = ref_size
 
         # convolutional layer 0
         self.cnn_0 = nn.Sequential(OrderedDict([

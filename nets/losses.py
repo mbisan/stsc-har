@@ -185,7 +185,7 @@ class TripletLoss(nn.Module):
         self.epsilon = epsilon
         self.m = m
 
-    def forward(self, features, _):
+    def forward(self, features, _=None):
         '''
             features has shape (n, 3, d)
             labels has shape (n) (not used)

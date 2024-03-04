@@ -48,18 +48,44 @@ class StreamingTimeSeriesCopy(Dataset):
             c_ = c[-1]
 
         if (self.mode in ["clr3", "clr"]) and not self.clr_indices is None:
-            close_id = np.random.choice(self.clr_indices[c], 1).item()
-            far_cl = (np.random.choice(len(self.clr_indices) - 1) + c + 1) % len(self.clr_indices)
-            # TODO balancear este sampleo
+            close_id = np.random.choice(self.clr_indices[c_], 1).item()
+            far_cl = (np.random.choice(len(self.clr_indices) - 1) + c_ + 1) % len(self.clr_indices)
+
+            # el sampleo del negativo (far_cl) está bien, cualquier carencia es debido al modelo
             far_id = np.random.choice(self.clr_indices[far_cl], 1).item()
 
             close_ts, _ = self.stsds[close_id]
             far_ts, _ = self.stsds[far_id]
 
             # element 0 and 1 belong to the same class, element 2 belongs to another class
-            return {"series": ts, "label": c_, "triplet": torch.stack([ts, close_ts, far_ts])}
+            return {"series": ts, "label": c_,
+                    "triplet": torch.stack([ts, close_ts, far_ts]),
+                    "far_cl": far_cl,
+                    "change_point": c.unique().shape[0] > 1}
 
-        if self.mode == "gasf":
+        elif self.mode in ["clr_ssl"]:
+            print(self.indices[(index-self.stsds.wsize):(index+self.stsds.wsize)].shape)
+            close_id = np.random.choice(
+                self.indices[(index-self.stsds.wsize):(index+self.stsds.wsize)], 1).item()
+
+            far_id = np.random.choice(
+                np.concatenate([
+                    self.indices[(index-2*self.stsds.wsize):],
+                    self.indices[(index+2*self.stsds.wsize):]
+                ]), 1).item()
+
+            close_ts, _ = self.stsds[close_id]
+            far_ts, _ = self.stsds[far_id]
+
+            # element 0 and 1 belong to the same class, element 2 belongs to another class
+            return {"series": ts, "label": c_,
+                    "triplet": torch.stack(
+                        # adding some noise so that ts and close_ts are never the same
+                        [ts, close_ts + 0.01 * np.random.randn(close_ts.shape), far_ts]),
+                    "far_cl": far_cl,
+                    "change_point": c.unique().shape[0] > 1}
+
+        elif self.mode == "gasf":
             transformed = gaf_compute(ts, "s", (-1, 1))
             return {"series": ts, "label": c_, "transformed": transformed}
 
@@ -88,9 +114,8 @@ class StreamingTimeSeriesCopy(Dataset):
         elif self.mode == "ts":
             return {"series": ts, "label": c_}
 
-        else:
-            # change_point is true if the window contains more than one class
-            return {"series": ts, "label": c_, "scs": c, "change_point": c.unique().shape[0] > 1}
+        # change_point is true if the window contains more than one class
+        return {"series": ts, "label": c_, "scs": c, "change_point": c.unique().shape[0] > 1}
 
     def __del__(self):
         del self.stsds

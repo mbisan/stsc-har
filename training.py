@@ -38,13 +38,13 @@ def main(args):
             args.encoder_architecture, dm.n_dims, args.encoder_features,
             args.lr, args.weight_decayL1, args.weight_decayL2, modelname,
             window_size=args.window_size,
-            output_regularizer=args.cf, mode=args.mode, monitor="val_ap")
+            output_regularizer=args.cf, mode=args.mode, overlap=args.voting, monitor="val_ap")
         modeltype = ContrastiveWrapper
     elif args.mode == "ae":
         model = AutoencoderWrapper(
             args.encoder_architecture, dm.n_dims, args.encoder_features, args.decoder_architecture,
             args.lr, args.weight_decayL1, args.weight_decayL2, args.cf, modelname, args.window_size,
-            monitor="val_ap"
+            monitor="val_loss"
         )
         modeltype = AutoencoderWrapper
     else:

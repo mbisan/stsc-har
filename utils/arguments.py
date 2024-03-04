@@ -94,7 +94,7 @@ def get_model_name(args):
                 f"{args.encoder_architecture}{args.encoder_features}|" + \
                 f"{args.decoder_architecture}{args.decoder_features},{args.decoder_layers}|" + \
                 (f"m{args.label_mode}|" if args.label_mode > 1 else "") + \
-                (f"v{args.voting},{args.rho}|" if args.voting > 1 else "") + \
+                (f"v{args.voting},{args.rho}|" if args.voting == 1 else "") + \
                 (f"ov{args.overlap}|" if args.overlap >= 0 else "")
 
     if args.mode in ["img", "dtw", "dtw_c"]:
@@ -108,7 +108,7 @@ def get_model_name(args):
         modelname += f"{ '-'.join([str(rate) for rate in args.pooling])}_{args.cf}|" + \
             f"ks{args.pattern_size}|"
 
-    if args.mode == "clr3":
+    if "clr" in args.mode:
         modelname += f"decay{args.cf}|"
 
     return modelname[:-1]

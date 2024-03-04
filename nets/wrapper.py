@@ -221,7 +221,8 @@ class ContrastiveWrapper(BaseWrapper):
 
     def __init__(self, encoder_arch, in_channels, latent_features, lr,
             weight_decayL1, weight_decayL2,
-            name=None, window_size=8, output_regularizer=0.01, mode="clr", **kwargs) -> None:
+            name=None, window_size=8, output_regularizer=0.01,
+            mode="clr", overlap=0, **kwargs) -> None:
 
         # save parameters as attributes
         super().__init__(lr, weight_decayL1, weight_decayL2, 2, **kwargs)
@@ -282,7 +283,7 @@ class ContrastiveWrapper(BaseWrapper):
 
         if stage != "train":
             self.probabilities.append(output)
-            self.labels.append(batch["label"])
+            self.labels.append(batch["change_point"])
 
         # Compute the loss and metrics
         if stage == "train":
@@ -308,14 +309,19 @@ class ContrastiveWrapper(BaseWrapper):
             return
 
         representations = torch.concatenate(self.probabilities, dim=0)
-        all_labels = torch.concatenate(self.labels, dim=0)
+        all_labels = torch.concatenate(self.labels, dim=0).long()
 
-        diff = (representations[:-self.window_size, :] - representations[self.window_size:, :])
-        dissimilarities = (diff.square().sum(-1) + 1e-8).sqrt()
-        labels = (all_labels[:-self.window_size] != all_labels[self.window_size:]).long()
+        displacement = self.window_size-self.overlap
+        if self.mode == "clr":
+            dissimilarities = - (
+                representations[:(-displacement), :] * representations[displacement:, :]).sum(-1)
+        else:
+            diff = (
+                representations[:(-displacement), :] - representations[displacement:, :])
+            dissimilarities = (diff.square().sum(-1) + 1e-8).sqrt()
 
         dissimilarities = dissimilarities.cpu().numpy()
-        labels = labels.cpu().numpy()
+        labels = all_labels[(self.window_size-self.overlap):].cpu().numpy()
 
         try:
             fpr, tpr, thresholds = roc_curve(labels, dissimilarities)
@@ -333,6 +339,7 @@ class ContrastiveWrapper(BaseWrapper):
 
             aupr = average_precision_score(labels, dissimilarities)
         except ValueError:
+            print("Error occurred")
             auroc = 0
             aupr = 0
 
