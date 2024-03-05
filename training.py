@@ -1,5 +1,6 @@
 import os
 from time import time
+from datetime import timedelta
 
 import json
 import subprocess
@@ -9,7 +10,7 @@ import warnings
 from pytorch_lightning import seed_everything
 import numpy as np
 
-from utils.helper_functions import load_dm, str_time, cm_str
+from utils.helper_functions import load_dm, cm_str
 from utils.methods import train_model, PLKWargs, MetricsSetting
 
 from utils.arguments import get_parser, get_model_name
@@ -95,4 +96,4 @@ if __name__ == "__main__":
 
     print(_args)
     main(_args)
-    print(f"Elapsed time: {str_time(time()-start_time)}")
+    print(f"Elapsed time: {timedelta(seconds=time()-start_time)}")

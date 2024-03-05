@@ -1,8 +1,8 @@
 import os
 
-def str_time(b):
-    timestr = f"{int(b//3600):02d}:{int((b%3600)//60):02d}"
-    return timestr + f":{int((b%3600)%60):02d}.{int(round(b%1, 3)*1000):03d}"
+# def str_time(b):
+#     timestr = f"{int(b//3600):02d}:{int((b%3600)//60):02d}"
+#     return timestr + f":{int((b%3600)%60):02d}.{int(round(b%1, 3)*1000):03d}"
 
 import numpy as np
 import torch

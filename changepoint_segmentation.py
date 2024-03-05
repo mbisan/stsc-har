@@ -1,6 +1,8 @@
 import os
 import json
 
+from argparse import ArgumentParser
+
 from sklearn.metrics import confusion_matrix
 
 import torch
@@ -8,47 +10,9 @@ import torch
 from pytorch_lightning import Trainer
 
 from utils.helper_functions import load_dm
-from utils.arguments import get_parser
 
 from nets.wrapper import ContrastiveWrapper, DFWrapper
 from nets.metrics import print_cm, metrics_from_cm
-
-
-CPMODEL_CP = "_uci_clr_cpmodel/clr_UCI-HAR_29_4_40_1_bs128_lr0.001_l10.0001_l21e-05_cnn_gap_ts10_cnn_ts_dec0_0_decay1/version_0/checkpoints/epoch=17-step=7956-val_re=0.0000.ckpt"
-CLASS_CP = "_uci_seg_class/ts_UCI-HAR_29_4_50_1_bs128_lr0.001_l10.0001_l21e-05_cnn_gap_ts24_mlp32_1/version_0/checkpoints/epoch=15-step=6560-val_re=0.7327.ckpt"
-
-parser = get_parser()
-args = parser.parse_args('''
---dataset UCI-HAR --batch_size 128 --window_size 40 --normalize --subjects_for_test 21 20 19 18 17 
---max_epochs 10 --lr 0.01 --training_dir training_clr --n_val_subjects 4 --reduce_imbalance
---encoder_architecture cnn_gap_ts --encoder_features 20 --cf 0.001 --label_mode 48
---mode clr3 --voting 0'''.split())
-
-with open(
-    os.path.join(
-        os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(CPMODEL_CP))),
-        "results.json"), encoding="utf-8") as f:
-    json_results = json.load(f)
-
-class Empty:
-    '''Empty class'''
-    window_size = 1
-
-args = Empty()
-
-args.__dict__.update(json_results["args"])
-dm = load_dm(args)
-
-# pylint: disable=no-value-for-parameter
-cpModel = ContrastiveWrapper.load_from_checkpoint(checkpoint_path=CPMODEL_CP)
-
-cpModel.eval()
-tr = Trainer()
-tr.test(datamodule=dm, model=cpModel)
-
-classifier = DFWrapper.load_from_checkpoint(checkpoint_path=CLASS_CP)
 
 def find_local_minima_indices(values, warning, alpha = 0.2, warning_time = 3, change_time = 2):
 
@@ -83,38 +47,110 @@ def find_local_minima_indices(values, warning, alpha = 0.2, warning_time = 3, ch
 
     return cp
 
-WSIZE = args.window_size
-OVLP = 0
-diff = (cpModel.rpr[:(-WSIZE+OVLP), :] * cpModel.rpr[(WSIZE-OVLP):, :]).sum(-1)
+class Empty:
+    '''Empty class'''
+    window_size = 1
 
-change_points = find_local_minima_indices(-diff + 1, 0.01, 0.2, 3, 1)
-print("Number of change points:", len(change_points))
+def evaluate_model(cpmodel_cp, clsmodel_cp):
 
-classifier.eval()
+    with open(
+        os.path.join(
+            os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(cpmodel_cp))),
+            "results.json"), encoding="utf-8") as f:
+        json_results = json.load(f)
 
-classes = dm.stsds.SCS[dm.stsds.indices[dm.ds_test.indices]]
-sts = dm.stsds.STS[:, dm.stsds.indices[dm.ds_test.indices]]
+    args = Empty()
 
-cp_ = [0] + change_points + [classes.shape[0]]
+    args.__dict__.update(json_results["args"])
+    dm = load_dm(args)
 
-j=0
-while j<len(cp_)-1:
-    if cp_[j+1]-cp_[j]<16:
-        new_id = int((cp_.pop(j) + cp_.pop(j))/2)
-        cp_.insert(j, new_id)
-    j+=1
+    # pylint: disable=no-value-for-parameter
+    cp_model = ContrastiveWrapper.load_from_checkpoint(checkpoint_path=cpmodel_cp)
 
-cp_[0] = 0
-cp_[-1] = classes.shape[0]
+    cp_model.eval()
+    tr = Trainer()
+    tr.test(datamodule=dm, model=cp_model)
 
-out_repeated = []
-for j in range(len(cp_)-1):
-    out = classifier(sts[None, :, cp_[j]:cp_[j+1]])
-    out_repeated.append(out.squeeze().argmax(-1).repeat(cp_[j+1]-cp_[j]))
+    classifier = DFWrapper.load_from_checkpoint(checkpoint_path=clsmodel_cp)
 
-cm = confusion_matrix(classes.numpy(), torch.cat(out_repeated).numpy())
+    wsize = args.window_size
+    ovlp = 0
+    diff = (cp_model.rpr[:(-wsize+ovlp), :] * cp_model.rpr[(wsize-ovlp):, :]).sum(-1)
 
-for key, value in metrics_from_cm(torch.from_numpy(cm)).items():
-    print(key, value.mean().item())
+    change_points = find_local_minima_indices(-diff + 1, 0.01, 0.1, 1, 1)
+    print("Number of change points:", len(change_points))
 
-print_cm(torch.from_numpy(cm), dm.n_classes)
+    classifier.eval()
+
+    classes = dm.stsds.SCS[dm.stsds.indices[dm.ds_test.indices]]
+    sts = dm.stsds.STS[:, dm.stsds.indices[dm.ds_test.indices]]
+
+    cp_ = [0] + change_points + [classes.shape[0]]
+
+    j=0
+    while j<len(cp_)-1:
+        if cp_[j+1]-cp_[j]<16:
+            new_id = int((cp_.pop(j) + cp_.pop(j))/2)
+            cp_.insert(j, new_id)
+        j+=1
+
+    cp_[0] = 0
+    cp_[-1] = classes.shape[0]
+
+    out_repeated = []
+    for j in range(len(cp_)-1):
+        out = classifier(sts[None, :, cp_[j]:cp_[j+1]])
+        out_repeated.append(out.squeeze().argmax(-1).repeat(cp_[j+1]-cp_[j]))
+
+    cm = confusion_matrix(classes.numpy(), torch.cat(out_repeated).numpy())
+
+    # for key, value in metrics_from_cm(torch.from_numpy(cm)).items():
+    #     print(key, value.mean().item())
+
+    # print_cm(torch.from_numpy(cm), dm.n_classes)
+    return cm
+
+def main(args):
+
+    cpmodels = []
+    for dir_name in os.listdir(args.cpdir):
+        if "cache" in dir_name:
+            continue
+        with open(os.path.join(args.cpdir, dir_name, "results.json"), "r", encoding="utf-8") as f:
+            cpmodels.append(json.load(f))
+
+    clsmodels = []
+    for dir_name in os.listdir(args.clsdir):
+        if "cache" in dir_name:
+            continue
+        with open(os.path.join(args.clsdir, dir_name, "results.json"), "r", encoding="utf-8") as f:
+            clsmodels.append(json.load(f))
+
+    cpmodels = sorted(cpmodels, key=lambda x: sum(x["args"]["subjects_for_test"]))
+    clsmodels = sorted(clsmodels, key=lambda x: sum(x["args"]["subjects_for_test"]))
+
+    cm = [evaluate_model(
+        os.path.join(os.path.dirname(args.cpdir), cpmodels[i]["path"]),
+        os.path.join(os.path.dirname(args.clsdir), clsmodels[i]["path"])
+    ) for i in range(len(cpmodels))]
+    cm = sum(cm)
+
+    for key, value in metrics_from_cm(torch.from_numpy(cm)).items():
+        print(key, value.mean().item())
+
+    print_cm(torch.from_numpy(cm), cm.shape[0])
+
+print("hola")
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--cpdir", type=str,
+        help="Directory where change point models are")
+    parser.add_argument("--clsdir", type=str,
+        help="Directory where classifiers are")
+
+    _args = parser.parse_args()
+    print("Hola")
+
+    main(_args)

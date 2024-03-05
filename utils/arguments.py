@@ -123,7 +123,7 @@ def get_command(args):
         if isinstance(value, bool):
             command += f"--{element} "
         elif isinstance(value, list):
-            command += f"--{element} " 
+            command += f"--{element} "
             command += ' '.join([str(subject) for subject in args.subjects_for_test]) + " "
         else:
             command += f"--{element} {value} "
