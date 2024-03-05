@@ -288,6 +288,7 @@ uci_clr = {
     "max_epochs": 30,
     "training_dir": "_uci_clr_cpmodel",
     "cf": 0,
+    "same_class": True
 }
 
 uci_seg_class = {
@@ -306,4 +307,70 @@ uci_seg_class = {
     "same_class": True
 }
 
-experiments = [uci_clr, uci_seg_class]
+harth_clr = {
+    "dataset": "HARTH",
+    "subjects_for_test": cross_validate["HARTH"],
+    "window_size": 40,
+    "window_stride": 1,
+    "mode": "clr",
+    "encoder_architecture": "cnn_ts",
+    "encoder_features": 10,
+    "decoder_architecture": "cnn_ts_dec", # not used
+    "decoder_features": 0, # not used
+    "decoder_layers": 0, # not used
+    "max_epochs": 10,
+    "training_dir": "_harth_clr_cpmodel",
+    "cf": 0,
+    "same_class": True
+}
+
+harth_seg_class = {
+    "dataset": "HARTH",
+    "subjects_for_test": cross_validate["HARTH"],
+    "window_size": 50,
+    "window_stride": 1,
+    "mode": "ts",
+    "encoder_architecture": "cnn_gap_ts",
+    "encoder_features": 24,
+    "decoder_architecture": "mlp",
+    "decoder_features": 32,
+    "decoder_layers": 1,
+    "max_epochs": 10,
+    "training_dir": "_harth_seg_class",
+    "same_class": True
+}
+
+wisdm_clr = {
+    "dataset": "WISDM",
+    "subjects_for_test": cross_validate["WISDM"],
+    "window_size": 20,
+    "window_stride": 1,
+    "mode": "clr",
+    "encoder_architecture": "cnn_ts",
+    "encoder_features": 10,
+    "decoder_architecture": "cnn_ts_dec", # not used
+    "decoder_features": 0, # not used
+    "decoder_layers": 0, # not used
+    "max_epochs": 30,
+    "training_dir": "_wisdm_clr_cpmodel",
+    "cf": 0,
+    "same_class": True
+}
+
+wisdm_seg_class = {
+    "dataset": "WISDM",
+    "subjects_for_test": cross_validate["WISDM"],
+    "window_size": 30,
+    "window_stride": 1,
+    "mode": "ts",
+    "encoder_architecture": "cnn_gap_ts",
+    "encoder_features": 24,
+    "decoder_architecture": "mlp",
+    "decoder_features": 32,
+    "decoder_layers": 1,
+    "max_epochs": 30,
+    "training_dir": "_wisdm_seg_class",
+    "same_class": True
+}
+
+experiments = [uci_clr, uci_seg_class, harth_clr, harth_seg_class, wisdm_clr, wisdm_seg_class]
