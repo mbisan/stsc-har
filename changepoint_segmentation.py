@@ -1,8 +1,11 @@
 import os
 import json
 
+import warnings
+
 from argparse import ArgumentParser
 
+import numpy as np
 from sklearn.metrics import confusion_matrix
 
 import torch
@@ -12,7 +15,10 @@ from pytorch_lightning import Trainer
 from utils.helper_functions import load_dm
 
 from nets.wrapper import ContrastiveWrapper, DFWrapper
-from nets.metrics import print_cm, metrics_from_cm
+from nets.metrics import print_cm, metrics_from_cm, group_classes
+
+# shut up warnings
+warnings.simplefilter("ignore", category=UserWarning)
 
 def find_local_minima_indices(values, warning, alpha = 0.2, warning_time = 3, change_time = 2):
 
@@ -28,10 +34,12 @@ def find_local_minima_indices(values, warning, alpha = 0.2, warning_time = 3, ch
         if running_mean > warning:
             in_warning += 1
 
-        if in_warning > warning_time and running_mean >= 2*warning:
+        compare_value = running_mean # / (1-alpha)
+
+        if in_warning > warning_time and compare_value >= 2*warning:
             in_change_point +=1
 
-        if in_change_point > change_time and running_mean >= 2*warning:
+        if in_change_point > change_time and compare_value >= 2*warning:
             if not waiting:
                 cp.append(i)
                 waiting = True
@@ -51,7 +59,7 @@ class Empty:
     '''Empty class'''
     window_size = 1
 
-def evaluate_model(cpmodel_cp, clsmodel_cp):
+def evaluate_model(cpmodel_cp, clsmodel_cp, trainer: Trainer):
 
     with open(
         os.path.join(
@@ -70,8 +78,7 @@ def evaluate_model(cpmodel_cp, clsmodel_cp):
     cp_model = ContrastiveWrapper.load_from_checkpoint(checkpoint_path=cpmodel_cp)
 
     cp_model.eval()
-    tr = Trainer()
-    tr.test(datamodule=dm, model=cp_model)
+    trainer.test(datamodule=dm, model=cp_model, verbose=False)
 
     classifier = DFWrapper.load_from_checkpoint(checkpoint_path=clsmodel_cp)
 
@@ -79,7 +86,12 @@ def evaluate_model(cpmodel_cp, clsmodel_cp):
     ovlp = 0
     diff = (cp_model.rpr[:(-wsize+ovlp), :] * cp_model.rpr[(wsize-ovlp):, :]).sum(-1)
 
-    change_points = find_local_minima_indices(-diff + 1, 0.01, 0.1, 1, 1)
+    kernel = 0.90 ** np.arange(40, 0, -1) # similar to uniform mean
+    kernel = kernel / np.sum(kernel)
+    diff = -diff+1
+    diff = np.convolve(diff.numpy(), kernel, mode="full")[:-39]
+
+    change_points = find_local_minima_indices(diff, 0.01, 1, 1, 1)
     print("Number of change points:", len(change_points))
 
     classifier.eval()
@@ -104,7 +116,9 @@ def evaluate_model(cpmodel_cp, clsmodel_cp):
         out = classifier(sts[None, :, cp_[j]:cp_[j+1]])
         out_repeated.append(out.squeeze().argmax(-1).repeat(cp_[j+1]-cp_[j]))
 
-    cm = confusion_matrix(classes.numpy(), torch.cat(out_repeated).numpy())
+    cm = confusion_matrix(
+        classes.numpy(), torch.cat(out_repeated).numpy(),
+        labels=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
 
     # for key, value in metrics_from_cm(torch.from_numpy(cm)).items():
     #     print(key, value.mean().item())
@@ -131,9 +145,11 @@ def main(args):
     cpmodels = sorted(cpmodels, key=lambda x: sum(x["args"]["subjects_for_test"]))
     clsmodels = sorted(clsmodels, key=lambda x: sum(x["args"]["subjects_for_test"]))
 
+    tr = Trainer()
     cm = [evaluate_model(
         os.path.join(os.path.dirname(args.cpdir), cpmodels[i]["path"]),
-        os.path.join(os.path.dirname(args.clsdir), clsmodels[i]["path"])
+        os.path.join(os.path.dirname(args.clsdir), clsmodels[i]["path"]),
+        tr
     ) for i in range(len(cpmodels))]
     cm = sum(cm)
 
@@ -142,7 +158,12 @@ def main(args):
 
     print_cm(torch.from_numpy(cm), cm.shape[0])
 
-print("hola")
+    cm2 = group_classes(torch.from_numpy(cm), [[6, 7, 8, 9, 10, 11]])
+    for key, value in metrics_from_cm(cm2).items():
+        print(key, value.mean().item())
+
+    print_cm(cm2, cm2.shape[0])
+
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--cpdir", type=str,
@@ -151,6 +172,5 @@ if __name__ == "__main__":
         help="Directory where classifiers are")
 
     _args = parser.parse_args()
-    print("Hola")
 
     main(_args)
