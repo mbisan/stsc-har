@@ -93,6 +93,8 @@ def evaluate_model(cpmodel_cp, clsmodel_cp, trainer: Trainer):
 
     change_points = find_local_minima_indices(diff, 0.01, 1, 1, 1)
     print("Number of change points:", len(change_points))
+    # for i in range(len(change_points)):
+    #     change_points[i] -= 20
 
     classifier.eval()
 
