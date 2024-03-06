@@ -145,7 +145,7 @@ def main(args):
     cpmodels = sorted(cpmodels, key=lambda x: sum(x["args"]["subjects_for_test"]))
     clsmodels = sorted(clsmodels, key=lambda x: sum(x["args"]["subjects_for_test"]))
 
-    tr = Trainer()
+    tr = Trainer(accelerator="cpu")
     cm = [evaluate_model(
         os.path.join(os.path.dirname(args.cpdir), cpmodels[i]["path"]),
         os.path.join(os.path.dirname(args.clsdir), clsmodels[i]["path"]),

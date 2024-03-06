@@ -451,7 +451,7 @@ def prepare_pamap2(dataset_dir):
                     # sensor data has shape (n, k), each column of size n is filled separately
                     nan_mask = np.isnan(sensor_data[:, j])
                     sensor_data[nan_mask, j] = np.interp(
-                        nan_mask.nonzero()[0], ~nan_mask.nonzero()[0], sensor_data[~nan_mask, j])
+                        nan_mask.nonzero()[0], (~nan_mask).nonzero()[0], sensor_data[~nan_mask, j])
 
                 with open(os.path.join(subject_folder, f"{name}{i}.npy"), "wb") as f:
                     np.save(f, sensor_data)
