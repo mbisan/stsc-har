@@ -477,19 +477,16 @@ class GroupedWrapper(BaseWrapper):
         self.dsrc = "series"
         self.sensor_groups = sensor_groups
 
+        inp_feats = 0
         for i, group in enumerate(self.sensor_groups):
             self.add_module(f"encoder{i}",
                 encoder_dict[encoder_arch](channels=group.shape[0], ref_size=1,
                     wdw_size=self.wdw_len, n_feature_maps=enc_feats))
 
             shape: torch.Tensor = self.__getattr__(f"encoder{i}").get_output_shape()
-            inp_feats = torch.prod(torch.tensor(shape[1:]))
+            inp_feats += torch.prod(torch.tensor(shape[1:]))
 
-            self.add_module(f"decoder{i}",
-                decoder_dict[decoder_arch](inp_feats=inp_feats,
-                    hid_feats=dec_feats, out_feats=dec_feats, hid_layers=1))
-
-        self.decoder = decoder_dict[decoder_arch](inp_feats=dec_feats * len(self.sensor_groups),
+        self.decoder = decoder_dict[decoder_arch](inp_feats=inp_feats,
             hid_feats=dec_feats, out_feats=n_classes, hid_layers=dec_layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -502,7 +499,7 @@ class GroupedWrapper(BaseWrapper):
         features = []
         for i, group in enumerate(self.sensor_groups):
             y = self.__getattr__(f"encoder{i}")(x[:, group, :])
-            features.append(self.__getattr__(f"decoder{i}")(y))
+            features.append(y)
         x = self.decoder(torch.cat(features, dim=-1))
         return x
 
