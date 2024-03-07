@@ -455,3 +455,80 @@ class AutoencoderWrapper(BaseWrapper):
 
         self.log(f"{stage}_auroc", auroc, on_epoch=True, on_step=False, prog_bar=True, logger=True)
         self.log(f"{stage}_ap", aupr, on_epoch=True, on_step=False, prog_bar=True, logger=True)
+
+class GroupedWrapper(BaseWrapper):
+
+    # pylint: disable=unused-argument unnecessary-dunder-call arguments-differ
+
+    def __init__(self, encoder_arch, decoder_arch, n_classes, wdw_len,
+        enc_feats, dec_feats, dec_layers, lr, weight_decayL1, weight_decayL2, sensor_groups,
+        name="test", **kwargs) -> None:
+
+        # save parameters as attributes
+        super().__init__(
+            lr, weight_decayL1, weight_decayL2,
+            n_classes, **kwargs)
+
+        self.__dict__.update(locals())
+        self.voting = None
+        self.save_hyperparameters()
+
+        # create encoder
+        self.dsrc = "series"
+        self.sensor_groups = sensor_groups
+
+        for i, group in enumerate(self.sensor_groups):
+            self.add_module(f"encoder{i}",
+                encoder_dict[encoder_arch](channels=group.shape[0], ref_size=1,
+                    wdw_size=self.wdw_len, n_feature_maps=enc_feats))
+
+            shape: torch.Tensor = self.__getattr__(f"encoder{i}").get_output_shape()
+            inp_feats = torch.prod(torch.tensor(shape[1:]))
+
+            self.add_module(f"decoder{i}",
+                decoder_dict[decoder_arch](inp_feats=inp_feats,
+                    hid_feats=dec_feats, out_feats=dec_feats, hid_layers=1))
+
+        self.decoder = decoder_dict[decoder_arch](inp_feats=dec_feats * len(self.sensor_groups),
+            hid_feats=dec_feats, out_feats=n_classes, hid_layers=dec_layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """ Forward pass. """
+        x=self.logits(x)
+        x = self.softmax(x)
+        return x
+
+    def logits(self, x: torch.Tensor) -> torch.Tensor:
+        features = []
+        for i, group in enumerate(self.sensor_groups):
+            y = self.__getattr__(f"encoder{i}")(x[:, group, :])
+            features.append(self.__getattr__(f"decoder{i}")(y))
+        x = self.decoder(torch.cat(features, dim=-1))
+        return x
+
+    def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
+
+        """ Inner step for the training, validation and testing. """
+
+        # Forward pass
+        output = self.logits(batch[self.dsrc])
+
+        # Compute the loss and metrics
+        loss = F.cross_entropy(output, batch["label"], ignore_index=100)
+        predictions = torch.argmax(output, dim=1)
+
+        self.__getattr__(f"{stage}_cm").update(predictions, batch["label"])
+        if stage != "train":
+            self.probabilities.append(torch.softmax(output, dim=1))
+            self.labels.append(batch["label"])
+
+        # log loss and metrics
+        self.log(
+            f"{stage}_loss", loss, on_epoch=True,
+            on_step=stage=="train", prog_bar=True, logger=True)
+
+        # return loss
+        if stage == "train":
+            return loss.to(torch.float32) + self.regularizer_loss()
+
+        return loss.to(torch.float32)

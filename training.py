@@ -15,7 +15,9 @@ from utils.methods import train_model, PLKWargs, MetricsSetting
 
 from utils.arguments import get_parser, get_model_name
 
-from nets.wrapper import DFWrapper, SegWrapper, ContrastiveWrapper, AutoencoderWrapper
+from nets.wrapper import (
+    DFWrapper, SegWrapper, ContrastiveWrapper, AutoencoderWrapper, GroupedWrapper
+)
 
 # shut up warnings
 warnings.simplefilter("ignore", category=UserWarning)
@@ -48,6 +50,15 @@ def main(args):
             monitor="val_loss", optimizer_mode="min"
         )
         modeltype = AutoencoderWrapper
+    elif args.mode == "gr":
+        print(dm.stsds.feature_group)
+        model = GroupedWrapper(
+            args.encoder_architecture, args.decoder_architecture, dm.n_classes, dm.wdw_len,
+            args.encoder_features, args.decoder_features, args.decoder_layers,
+            args.lr, args.weight_decayL1, args.weight_decayL2, dm.stsds.feature_group,
+            modelname, monitor="val_re"
+        )
+        modeltype = GroupedWrapper
     else:
         model = DFWrapper(
             args.mode,
