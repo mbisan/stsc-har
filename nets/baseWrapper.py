@@ -45,7 +45,7 @@ class BaseWrapper(LightningModule):
 
         # create softmax and flatten layers
         self.flatten = nn.Flatten(start_dim=1)
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=1)
 
         for phase in ["train", "val", "test"]:
             self.__setattr__(f"{phase}_cm",
