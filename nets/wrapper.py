@@ -190,7 +190,11 @@ class SegWrapper(BaseWrapper):
         """ Inner step for the training, validation and testing. """
 
         # Forward pass
-        output = self.logits(batch["series"])
+        if stage == "train":
+            output = self.logits(batch["series"] + 0.01 * torch.randn(
+                size=batch["series"].shape, device=batch["series"].device))
+        else:
+            output = self.logits(batch["series"])
 
         skip = output.shape[-1] - self.overlap
 
