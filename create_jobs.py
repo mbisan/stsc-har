@@ -111,7 +111,7 @@ if __name__ == "__main__":
         all_jobs, cache_dir = produce_experiments(
             {**baseArguments, **exp_args}, exps_per_job=args_.exps_per_job)
 
-        single_launch_script += f"cd {cache_dir}\n" + "\n".join(all_jobs) + "\n"
+        single_launch_script += f"cd {cache_dir}\n" + "\n".join(all_jobs) + "\ncd ../..\n"
 
         # with open(os.path.join(cache_dir, "launch.sh"), "w", encoding="utf-8") as f:
         #     f.write("#!\\bin\\bash\n" + "\n".join(all_jobs)) # bash script
@@ -120,4 +120,4 @@ if __name__ == "__main__":
 
     with open(os.path.join("launch.sh"), "w", encoding="utf-8") as f:
         f.write(single_launch_script) # bash script
-    print("launch.sh file at", cache_dir)
+    print("launch.sh file at", args_.dir)
