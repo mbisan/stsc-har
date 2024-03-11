@@ -1,6 +1,7 @@
 from nets.encoders.CNN_GAP_img import CNN_GAP_IMG
 from nets.encoders.CNN_GAP_ts import CNN_GAP_TS
 from nets.encoders.CNN_ts import CNN_TS
+from nets.encoders.CNN_2d_ts import CNN_2d_TS
 from nets.encoders.encoders import RemoveUpperPart, NoLayer
 from nets.encoders.transformer import Transformer
 
@@ -17,7 +18,8 @@ encoder_dict = {
     "cnn_ts": CNN_TS,
     "none": NoLayer,
     "noupper": RemoveUpperPart,
-    "transformer": Transformer
+    "transformer": Transformer,
+    "cnn_2d_ts": CNN_2d_TS
 }
 
 decoder_dict = {
