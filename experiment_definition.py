@@ -32,58 +32,56 @@ baseArguments = {
     "cpus": 8,
     "rho": 0,
     "reduce_imbalance": True,
-    "normalize": True
+    "normalize": True,
+    "max_epochs": 25,
 }
 
 harth_ts = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 100,
+    "window_size": [50, 100],
     "window_stride": 1,
     "mode": "ts",
-    "encoder_architecture": "cnn_gap_ts",
+    "encoder_architecture": ["cnn_gap_ts", "cnn_2d_ts"],
     "encoder_features": 24,
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 10,
     "training_dir": "_harth_ts",
 }
 
 uci_ts = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": 100,
+    "window_size": [50, 100],
     "window_stride": 1,
     "mode": "ts",
-    "encoder_architecture": "cnn_gap_ts",
+    "encoder_architecture": ["cnn_gap_ts", "cnn_2d_ts"],
     "encoder_features": 24,
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 30,
     "training_dir": "_uci_ts",
 }
 
 wisdm_ts = {
     "dataset": "WISDM",
     "subjects_for_test": cross_validate["WISDM"],
-    "window_size": 40,
+    "window_size": [20, 40],
     "window_stride": 1,
     "mode": "ts",
-    "encoder_architecture": "cnn_gap_ts",
+    "encoder_architecture": ["cnn_gap_ts", "cnn_2d_ts"],
     "encoder_features": 24,
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 30,
     "training_dir": "_wisdm_ts",
 }
 
 harth_img = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 50,
+    "window_size": 25,
     "window_stride": 2,
     "mode": "img",
     "encoder_architecture": "cnn_gap_img",
@@ -91,12 +89,11 @@ harth_img = {
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 10,
     "training_dir": "_harth_img",
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar"],
-    "pattern_size": 30,
+    "pattern_size": 25,
     "cached": False,
     "rho": 0.1,
     "ram": 24
@@ -105,7 +102,7 @@ harth_img = {
 harth_img_g = {
     "dataset": "HARTH_g",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 50,
+    "window_size": 25,
     "window_stride": 2,
     "mode": "img",
     "encoder_architecture": "cnn_gap_img",
@@ -113,12 +110,11 @@ harth_img_g = {
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 10,
     "training_dir": "_harth_img_g",
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "fftcoef"],
-    "pattern_size": 30,
+    "pattern_size": 25,
     "cached": False,
     "rho": 0.1,
     "ram": 24
@@ -127,7 +123,7 @@ harth_img_g = {
 uci_img = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": 50,
+    "window_size": 25,
     "window_stride": 2,
     "mode": "img",
     "encoder_architecture": "cnn_gap_img",
@@ -135,12 +131,11 @@ uci_img = {
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 30,
     "training_dir": "_uci_img",
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar", "noise"],
-    "pattern_size": 30,
+    "pattern_size": 25,
     "cached": False,
     "rho": 0.1,
 }
@@ -148,7 +143,7 @@ uci_img = {
 wisdm_img = {
     "dataset": "WISDM",
     "subjects_for_test": cross_validate["WISDM"],
-    "window_size": 50,
+    "window_size": 25,
     "window_stride": 2,
     "mode": "img",
     "encoder_architecture": "cnn_gap_img",
@@ -156,12 +151,11 @@ wisdm_img = {
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 30,
     "training_dir": "_wisdm_img",
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar"],
-    "pattern_size": 30,
+    "pattern_size": 25,
     "cached": False,
     "rho": 0.1,
 }
@@ -169,7 +163,7 @@ wisdm_img = {
 harth_tr = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 100,
+    "window_size": 50,
     "window_stride": 1,
     "mode": ["gasf", "gadf", "mtf"],
     "encoder_architecture": "cnn_gap_img",
@@ -177,7 +171,6 @@ harth_tr = {
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 10,
     "training_dir": "_harth_tr",
     "mtf_bins": 16,
 }
@@ -185,7 +178,7 @@ harth_tr = {
 uci_tr = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": 100,
+    "window_size": 50,
     "window_stride": 1,
     "mode": ["gasf", "gadf", "mtf"],
     "encoder_architecture": "cnn_gap_img",
@@ -193,7 +186,6 @@ uci_tr = {
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 30,
     "training_dir": "_uci_tr",
     "mtf_bins": 16,
 }
@@ -209,7 +201,6 @@ wisdm_tr = {
     "decoder_architecture": "mlp",
     "decoder_features": 32,
     "decoder_layers": 1,
-    "max_epochs": 30,
     "training_dir": "_wisdm_tr",
     "mtf_bins": 8,
 }
@@ -217,7 +208,7 @@ wisdm_tr = {
 harth_seg = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 256,
+    "window_size": 128,
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
@@ -225,7 +216,6 @@ harth_seg = {
     "decoder_architecture": "-", # not used
     "decoder_features": 0, # not used
     "decoder_layers": 0, # not used
-    "max_epochs": 10,
     "training_dir": "_harth_seg",
     "cf": 1.5,
     "pattern_size": 3,
@@ -237,15 +227,14 @@ harth_seg = {
 uci_seg = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": 256,
+    "window_size": 128,
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
-    "encoder_features": 10,
+    "encoder_features": 12,
     "decoder_architecture": "-", # not used
     "decoder_features": 0, # not used
     "decoder_layers": 0, # not used
-    "max_epochs": 30,
     "training_dir": "_uci_seg",
     "cf": 1.5,
     "pattern_size": 3,
@@ -257,15 +246,14 @@ uci_seg = {
 wisdm_seg = {
     "dataset": "WISDM",
     "subjects_for_test": cross_validate["WISDM"],
-    "window_size": 96,
+    "window_size": 80,
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
-    "encoder_features": 16,
+    "encoder_features": 12,
     "decoder_architecture": "-", # not used
     "decoder_features": 0, # not used
     "decoder_layers": 0, # not used
-    "max_epochs": 30,
     "training_dir": "_wisdm_seg",
     "cf": 1.5,
     "pattern_size": 3,
