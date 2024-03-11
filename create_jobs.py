@@ -1,5 +1,7 @@
 import os
 
+from argparse import ArgumentParser
+
 from utils.arguments import get_model_name, get_command
 from experiment_definition import experiments, baseArguments
 
@@ -34,7 +36,7 @@ source activate dev2
 class EmptyExperiment:
     pass
 
-def produce_experiments(args):
+def produce_experiments(args, exps_per_job=3):
 
     print("Experiments for mode", args["mode"])
 
@@ -79,7 +81,6 @@ def produce_experiments(args):
 
     print("Saving experiments to", save_dir)
 
-    exps_per_job = 4
     for i in range(0, len(experiment_arguments), exps_per_job):
         last = min(i+exps_per_job, len(experiment_arguments))
         jobname, job = create_jobs(experiment_arguments[i:last])
@@ -93,11 +94,30 @@ def produce_experiments(args):
     return jobs, save_dir
 
 if __name__ == "__main__":
-    for exp_args in experiments:
-        all_jobs, cache_dir = produce_experiments({**baseArguments, **exp_args})
+    parser = ArgumentParser()
+    parser.add_argument("--dir", type=str, default="./")
+    parser.add_argument("--exps_per_job", type=int, default=3)
 
-        with open(os.path.join(cache_dir, "launch.sh"), "w", encoding="utf-8") as f:
-            f.write("#!\\bin\\bash\n" + "\n".join(all_jobs)) # bash script
+    args_ = parser.parse_args()
+
+    if not os.path.exists(args_.dir):
+        os.mkdir(args_.dir)
+
+    os.chdir(args_.dir)
+
+    single_launch_script = "#!\\bin\\bash\n"
+
+    for exp_args in experiments:
+        all_jobs, cache_dir = produce_experiments(
+            {**baseArguments, **exp_args}, exps_per_job=args_.exps_per_job)
+
+        single_launch_script += f"cd {cache_dir}\n" + "\n".join(all_jobs) + "\n"
+
+        # with open(os.path.join(cache_dir, "launch.sh"), "w", encoding="utf-8") as f:
+        #     f.write("#!\\bin\\bash\n" + "\n".join(all_jobs)) # bash script
 
         print(f"Number of experiments created: {len(all_jobs)}")
-        print("launch.sh file at", cache_dir)
+
+    with open(os.path.join("launch.sh"), "w", encoding="utf-8") as f:
+        f.write(single_launch_script) # bash script
+    print("launch.sh file at", cache_dir)

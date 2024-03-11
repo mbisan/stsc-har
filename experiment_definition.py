@@ -38,7 +38,7 @@ baseArguments = {
 harth_ts = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 50,
+    "window_size": 100,
     "window_stride": 1,
     "mode": "ts",
     "encoder_architecture": "cnn_gap_ts",
@@ -53,7 +53,7 @@ harth_ts = {
 uci_ts = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": 50,
+    "window_size": 100,
     "window_stride": 1,
     "mode": "ts",
     "encoder_architecture": "cnn_gap_ts",
@@ -68,7 +68,7 @@ uci_ts = {
 wisdm_ts = {
     "dataset": "WISDM",
     "subjects_for_test": cross_validate["WISDM"],
-    "window_size": 20,
+    "window_size": 40,
     "window_stride": 1,
     "mode": "ts",
     "encoder_architecture": "cnn_gap_ts",
@@ -83,7 +83,7 @@ wisdm_ts = {
 harth_img = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 25,
+    "window_size": 50,
     "window_stride": 2,
     "mode": "img",
     "encoder_architecture": "cnn_gap_img",
@@ -96,7 +96,7 @@ harth_img = {
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar"],
-    "pattern_size": 25,
+    "pattern_size": 30,
     "cached": False,
     "rho": 0.1,
     "ram": 24
@@ -105,7 +105,7 @@ harth_img = {
 harth_img_g = {
     "dataset": "HARTH_g",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 25,
+    "window_size": 50,
     "window_stride": 2,
     "mode": "img",
     "encoder_architecture": "cnn_gap_img",
@@ -118,7 +118,7 @@ harth_img_g = {
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "fftcoef"],
-    "pattern_size": 25,
+    "pattern_size": 30,
     "cached": False,
     "rho": 0.1,
     "ram": 24
@@ -127,7 +127,7 @@ harth_img_g = {
 uci_img = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": 25,
+    "window_size": 50,
     "window_stride": 2,
     "mode": "img",
     "encoder_architecture": "cnn_gap_img",
@@ -140,7 +140,7 @@ uci_img = {
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar", "noise"],
-    "pattern_size": 25,
+    "pattern_size": 30,
     "cached": False,
     "rho": 0.1,
 }
@@ -148,7 +148,7 @@ uci_img = {
 wisdm_img = {
     "dataset": "WISDM",
     "subjects_for_test": cross_validate["WISDM"],
-    "window_size": 16,
+    "window_size": 50,
     "window_stride": 2,
     "mode": "img",
     "encoder_architecture": "cnn_gap_img",
@@ -161,7 +161,7 @@ wisdm_img = {
     "num_medoids": 1,
     "compute_n": 300,
     "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar"],
-    "pattern_size": 16,
+    "pattern_size": 30,
     "cached": False,
     "rho": 0.1,
 }
@@ -169,7 +169,7 @@ wisdm_img = {
 harth_tr = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 50,
+    "window_size": 100,
     "window_stride": 1,
     "mode": ["gasf", "gadf", "mtf"],
     "encoder_architecture": "cnn_gap_img",
@@ -185,7 +185,7 @@ harth_tr = {
 uci_tr = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": 50,
+    "window_size": 100,
     "window_stride": 1,
     "mode": ["gasf", "gadf", "mtf"],
     "encoder_architecture": "cnn_gap_img",
@@ -201,7 +201,7 @@ uci_tr = {
 wisdm_tr = {
     "dataset": "WISDM",
     "subjects_for_test": cross_validate["WISDM"],
-    "window_size": 20,
+    "window_size": 40,
     "window_stride": 1,
     "mode": ["gasf", "gadf", "mtf"],
     "encoder_architecture": "cnn_gap_img",
@@ -217,7 +217,7 @@ wisdm_tr = {
 harth_seg = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": 120,
+    "window_size": 256,
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
@@ -237,7 +237,7 @@ harth_seg = {
 uci_seg = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": 120,
+    "window_size": 256,
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
@@ -257,7 +257,7 @@ uci_seg = {
 wisdm_seg = {
     "dataset": "WISDM",
     "subjects_for_test": cross_validate["WISDM"],
-    "window_size": 48,
+    "window_size": 96,
     "window_stride": 1,
     "mode": "seg",
     "encoder_architecture": "utime",
@@ -373,4 +373,8 @@ wisdm_seg_class = {
     "same_class": True
 }
 
-experiments = [uci_clr, uci_seg_class, harth_clr, harth_seg_class, wisdm_clr, wisdm_seg_class]
+experiments = [
+    harth_ts, harth_tr, harth_img, harth_img_g, harth_seg,
+    uci_ts, uci_tr, uci_img, uci_seg,
+    wisdm_ts, wisdm_tr, wisdm_img, wisdm_seg
+]#, harth_clr, harth_seg_class, wisdm_clr, wisdm_seg_class]

@@ -124,7 +124,7 @@ def get_command(args):
             command += f"--{element} "
         elif isinstance(value, list):
             command += f"--{element} "
-            command += ' '.join([str(subject) for subject in args.subjects_for_test]) + " "
+            command += ' '.join([str(val) for val in value]) + " "
         else:
             command += f"--{element} {value} "
 
