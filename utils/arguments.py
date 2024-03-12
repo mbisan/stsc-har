@@ -121,7 +121,8 @@ def get_command(args):
         if element in ["command", "ram", "cpus"]:
             continue
         if isinstance(value, bool):
-            command += f"--{element} "
+            if value:
+                command += f"--{element} "
         elif isinstance(value, list):
             command += f"--{element} "
             command += ' '.join([str(val) for val in value]) + " "

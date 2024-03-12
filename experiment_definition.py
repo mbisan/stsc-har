@@ -20,7 +20,7 @@ baseArguments = {
     "num_workers": 8,
     "lr": 0.001,
     "n_val_subjects": 4,
-    "batch_size": 128,
+    "batch_size": 64,
     "label_mode": 1,
     "voting": 1,
     "overlap": -1,
@@ -33,16 +33,16 @@ baseArguments = {
     "rho": 0,
     "reduce_imbalance": True,
     "normalize": True,
-    "max_epochs": 25,
+    "max_epochs": 30,
 }
 
 harth_ts = {
     "dataset": "HARTH",
     "subjects_for_test": cross_validate["HARTH"],
-    "window_size": [50, 100],
+    "window_size": 50,
     "window_stride": 1,
     "mode": "ts",
-    "encoder_architecture": ["cnn_gap_ts", "cnn_2d_ts"],
+    "encoder_architecture": "cnn_gap_ts",
     "encoder_features": 24,
     "decoder_architecture": "mlp",
     "decoder_features": 32,
@@ -53,10 +53,10 @@ harth_ts = {
 uci_ts = {
     "dataset": "UCI-HAR",
     "subjects_for_test": cross_validate["UCI-HAR"],
-    "window_size": [50, 100],
+    "window_size": 50,
     "window_stride": 1,
     "mode": "ts",
-    "encoder_architecture": ["cnn_gap_ts", "cnn_2d_ts"],
+    "encoder_architecture": "cnn_gap_ts",
     "encoder_features": 24,
     "decoder_architecture": "mlp",
     "decoder_features": 32,
@@ -67,10 +67,10 @@ uci_ts = {
 wisdm_ts = {
     "dataset": "WISDM",
     "subjects_for_test": cross_validate["WISDM"],
-    "window_size": [20, 40],
+    "window_size": 20,
     "window_stride": 1,
     "mode": "ts",
-    "encoder_architecture": ["cnn_gap_ts", "cnn_2d_ts"],
+    "encoder_architecture": "cnn_gap_ts",
     "encoder_features": 24,
     "decoder_architecture": "mlp",
     "decoder_features": 32,
@@ -221,7 +221,6 @@ harth_seg = {
     "pattern_size": 3,
     "pooling": [[2, 2, 2]],
     "overlap": 0,
-    "batch_size": 64
 }
 
 uci_seg = {
@@ -240,7 +239,6 @@ uci_seg = {
     "pattern_size": 3,
     "pooling": [[2, 2, 2]],
     "overlap": 0,
-    "batch_size": 64
 }
 
 wisdm_seg = {
@@ -259,7 +257,6 @@ wisdm_seg = {
     "pattern_size": 3,
     "pooling": [[2, 2, 2]],
     "overlap": 0,
-    "batch_size": 64
 }
 
 uci_clr = {
@@ -363,6 +360,6 @@ wisdm_seg_class = {
 
 experiments = [
     harth_ts, harth_tr, harth_img, harth_img_g, harth_seg,
-    uci_ts, uci_tr, uci_img, uci_seg,
-    wisdm_ts, wisdm_tr, wisdm_img, wisdm_seg
+    #uci_ts, uci_tr, uci_img, uci_seg,
+    #wisdm_ts, wisdm_tr, wisdm_img, wisdm_seg
 ]#, harth_clr, harth_seg_class, wisdm_clr, wisdm_seg_class]
