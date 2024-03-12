@@ -242,18 +242,18 @@ class LDFDataset(LightningDataModule):
 
     def val_dataloader(self) -> DataLoader:
         """ Returns the validation DataLoader. """
-        return DataLoader(self.ds_val, batch_size=self.batch_size,
+        return DataLoader(self.ds_val, batch_size=self.batch_size*4,
             num_workers=self.num_workers, shuffle=False,
             pin_memory=True, persistent_workers=True)
 
     def test_dataloader(self) -> DataLoader:
         """ Returns the test DataLoader. """
-        return DataLoader(self.ds_test, batch_size=self.batch_size,
+        return DataLoader(self.ds_test, batch_size=self.batch_size*4,
             num_workers=self.num_workers, shuffle=False,
             pin_memory=True, persistent_workers=True)
 
     def predict_dataloader(self) -> DataLoader:
         """ Returns the test DataLoader. """
-        return DataLoader(self.ds_test, batch_size=self.batch_size,
+        return DataLoader(self.ds_test, batch_size=self.batch_size*4,
             num_workers=self.num_workers, shuffle=False,
             pin_memory=True, persistent_workers=True)
