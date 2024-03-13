@@ -7,7 +7,7 @@ from pytorch_lightning import LightningDataModule
 import pywt
 
 from data.base import STSDataset
-from data.methods import reduce_imbalance
+from data.methods import reduce_imbalance, reduce_imbalance2
 
 from transforms.gaf_mtf import mtf_compute, gaf_compute
 
@@ -173,7 +173,7 @@ class LSTSDataset(LightningDataModule):
         self.reduce_train_imbalance = reduce_train_imbalance
 
         if reduce_train_imbalance:
-            train_indices, train_sampler = reduce_imbalance(
+            train_indices, train_sampler = reduce_imbalance2(
                 train_indices, self.stsds, data_split["train"], include_change_points=change_points)
             self.train_sampler = train_sampler
 

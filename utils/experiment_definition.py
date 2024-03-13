@@ -1,25 +1,15 @@
 cross_validate = {
-    "HARTH": [[21],[20],
-              [19],[18],[17],[16],[15],[14],[13],[12],[11],[10],
-              [9],[8],[7],[6],[5],[4],[3],[2],[1],[0]],
-    "UCI-HAR": [[29],[28],[27],[26],[25],[24],[23],[22],[21],[20],
-                [19],[18],[17],[16],[15],[14],[13],[12],[11],[10],
-                [9],[8],[7],[6],[5],[4],[3],[2],[1],[0]],
-    "WISDM": [[35],[34],[33],[32],[31],[30],
-              [29],[28],[27],[26],[25],[24],[23],[22],[21],[20],
-              [19],[18],[17],[16],[15],[14],[13],[12],[11],[10],
-              [9],[8],[7],[6],[5],[4],[3],[2],[1],[0]],
-    "HARTH_g": [[21],[20],
-                [19],[18],[17],[16],[15],[14],[13],[12],[11],[10],
-                [9],[8],[7],[6],[5],[4],[3],[2],[1],[0]],
-    "PAMAP2": [[8],[7],[6],[5],[4],[3],[2],[1],[0]],
-    "MHEALTH": [[9],[8],[7],[6],[5],[4],[3],[2],[1],[0]]
+    "HARTH": [[i] for i in range(22)],
+    "UCI-HAR": [[i] for i in range(30)],
+    "WISDM": [[i] for i in range(36)],
+    "PAMAP2": [[i] for i in range(9)],
+    "MHEALTH": [[i] for i in range(10)],
 }
 
 baseArguments = {
     "num_workers": 8,
     "lr": 0.001,
-    "n_val_subjects": 4,
+    "n_val_subjects": 3,
     "batch_size": 64,
     "label_mode": 1,
     "voting": 1,
@@ -33,7 +23,8 @@ baseArguments = {
     "rho": 0,
     "reduce_imbalance": True,
     "normalize": True,
-    "max_epochs": 30,
+    "max_epochs": 20,
+    "same_class": True
 }
 
 harth_ts = {
@@ -359,7 +350,7 @@ wisdm_seg_class = {
 }
 
 experiments = [
-    harth_ts, harth_tr, harth_img, harth_img_g, harth_seg,
+    harth_ts, harth_tr, harth_img, harth_seg, # harth_img_g,
     #uci_ts, uci_tr, uci_img, uci_seg,
     #wisdm_ts, wisdm_tr, wisdm_img, wisdm_seg
 ]#, harth_clr, harth_seg_class, wisdm_clr, wisdm_seg_class]
