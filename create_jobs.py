@@ -3,7 +3,7 @@ import os
 from argparse import ArgumentParser
 
 from utils.arguments import get_model_name, get_command
-from experiment_definition import experiments, baseArguments
+from utils.experiment_definition import experiments, baseArguments
 
 def create_jobs(args_list):
     modelname = get_model_name(args_list[0])
