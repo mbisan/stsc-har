@@ -1,0 +1,9 @@
+{
+    "jupyter.notebookFileRoot": "${workspaceFolder}",
+    "pylint.args": [
+        "--disable=missing-module-docstring",
+        "--disable=missing-function-docstring",
+        "--disable=missing-class-docstring",
+        "--disable=too-many-arguments"
+    ]
+}
