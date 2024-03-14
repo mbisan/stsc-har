@@ -4,6 +4,8 @@
         "--disable=missing-module-docstring",
         "--disable=missing-function-docstring",
         "--disable=missing-class-docstring",
-        "--disable=too-many-arguments"
+        "--disable=too-many-arguments",
+        "--disable=eval-used",
+        "--disable=wrong-import-position"
     ]
 }
