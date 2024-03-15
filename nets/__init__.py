@@ -1,4 +1,5 @@
 from nets.encoders.CNN_GAP_img import CNN_GAP_IMG
+from nets.encoders.CNN_GAP_img2 import CNN_GAP_IMG2
 from nets.encoders.CNN_GAP_ts import CNN_GAP_TS
 from nets.encoders.CNN_ts import CNN_TS
 from nets.encoders.CNN_2d_ts import CNN_2d_TS
@@ -14,6 +15,7 @@ from nets.segmentation.utime import UTime
 
 encoder_dict = {
     "cnn_gap_img": CNN_GAP_IMG,
+    "cnn_gap_img2": CNN_GAP_IMG2,
     "cnn_gap_ts": CNN_GAP_TS,
     "cnn_ts": CNN_TS,
     "none": NoLayer,
