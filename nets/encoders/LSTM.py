@@ -17,7 +17,7 @@ class RNN_ts(nn.Module):
             num_layers=n_layers,
             bias=True,
             batch_first=True,
-            dropout=0,
+            dropout=0.1,
             bidirectional=False,
         )
 

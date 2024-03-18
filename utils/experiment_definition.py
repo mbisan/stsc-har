@@ -349,8 +349,54 @@ wisdm_seg_class = {
     "same_class": True
 }
 
+harth_lstm = {
+    "dataset": "HARTH",
+    "subjects_for_test": cross_validate["HARTH"],
+    "window_size": 50,
+    "window_stride": 1,
+    "mode": "lstm",
+    "encoder_architecture": "-",
+    "encoder_features": 32,
+    "decoder_architecture": "mlp",
+    "decoder_features": 32,
+    "decoder_layers": 1,
+    "training_dir": "_harth_lstm",
+    "encoder_layers": 2
+}
+
+uci_lstm = {
+    "dataset": "UCI-HAR",
+    "subjects_for_test": cross_validate["UCI-HAR"],
+    "window_size": 50,
+    "window_stride": 1,
+    "mode": "lstm",
+    "encoder_architecture": "-",
+    "encoder_features": 32,
+    "decoder_architecture": "mlp",
+    "decoder_features": 32,
+    "decoder_layers": 1,
+    "training_dir": "_uci_lstm",
+    "encoder_layers": 2
+}
+
+wisdm_lstm = {
+    "dataset": "WISDM",
+    "subjects_for_test": cross_validate["WISDM"],
+    "window_size": 40,
+    "window_stride": 1,
+    "mode": "lstm",
+    "encoder_architecture": "-",
+    "encoder_features": 32,
+    "decoder_architecture": "mlp",
+    "decoder_features": 32,
+    "decoder_layers": 1,
+    "training_dir": "_wisdm_lstm",
+    "encoder_layers": 2
+}
+
 experiments = [
-    harth_ts, harth_tr, harth_img, harth_seg, # harth_img_g,
+    harth_lstm, uci_lstm, wisdm_lstm
+    #harth_ts, harth_tr, harth_img, harth_seg, # harth_img_g,
     #uci_ts, uci_tr, uci_img, uci_seg,
     #wisdm_ts, wisdm_tr, wisdm_img, wisdm_seg
 ]#, harth_clr, harth_seg_class, wisdm_clr, wisdm_seg_class]
