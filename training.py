@@ -16,7 +16,7 @@ from utils.methods import train_model, PLKWargs, MetricsSetting
 from utils.arguments import get_parser, get_model_name
 
 from nets.wrapper import (
-    DFWrapper, SegWrapper, ContrastiveWrapper, AutoencoderWrapper, GroupedWrapper
+    DFWrapper, SegWrapper, ContrastiveWrapper, AutoencoderWrapper, GroupedWrapper, RNNWrapper
 )
 
 # shut up warnings
@@ -59,6 +59,15 @@ def main(args):
             modelname, monitor="val_re"
         )
         modeltype = GroupedWrapper
+    elif args.mode == "lstm":
+        model = RNNWrapper(
+            dm.n_dims, args.encoder_layers, args.encoder_features, dm.n_classes,
+            args.decoder_architecture,
+            args.decoder_features, args.decoder_layers,
+            args.lr, args.weight_decayL1, args.weight_decayL2,
+            modelname, monitor="val_re"
+        )
+        modeltype = RNNWrapper
     else:
         model = DFWrapper(
             args.mode,

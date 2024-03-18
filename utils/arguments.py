@@ -81,6 +81,8 @@ def get_parser():
         help="Complexity factor of utime")
     parser.add_argument("--same_class", action="store_true",
         help="Same class windows only for training")
+    parser.add_argument("--encoder_layers", type=int, default=1,
+        help="Layers of encoder")
 
     return parser
 

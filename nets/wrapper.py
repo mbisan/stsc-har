@@ -529,3 +529,93 @@ class GroupedWrapper(BaseWrapper):
             return loss.to(torch.float32) + self.regularizer_loss()
 
         return loss.to(torch.float32)
+
+class RNNWrapper(BaseWrapper):
+
+    # pylint: disable=unused-argument unnecessary-dunder-call arguments-differ
+
+    def __init__(self, in_channels, enc_layers, latent_features, n_classes,
+            decoder_arch, dec_feats, dec_layers, lr,
+            weight_decayL1, weight_decayL2, name=None, **kwargs) -> None:
+
+        # save parameters as attributes
+        super().__init__(lr, weight_decayL1, weight_decayL2, n_classes, **kwargs)
+
+        self.__dict__.update(locals())
+        self.save_hyperparameters()
+
+        self.rnn = encoder_dict["lstm"](
+            channels=in_channels,
+            latent_size=latent_features,
+            n_layers=enc_layers
+        )
+
+        self.latent_features = latent_features
+
+        self.decoder = decoder_dict[decoder_arch](
+            inp_feats=latent_features,
+            hid_feats=dec_feats,
+            out_feats=n_classes,
+            hid_layers=dec_layers
+        )
+
+    def forward(self, x: torch.Tensor, idx: None) -> torch.Tensor:
+        x = self.logits(x)
+        return self.softmax(x)
+
+    def logits(self, x: torch.Tensor) -> torch.Tensor:
+        out, _ = self.rnn(x) # out has shape (n, ws, latent_feats)
+        out = out.reshape((-1, self.latent_features)) # out has shape (n * ws, latent_features)
+        out = self.decoder(out) # shape (n * ws, n_classes)
+        return out.view(x.shape[0], x.shape[2], -1).permute((0, 2, 1))
+
+    def _inner_step_train(self, batch: dict[str: torch.Tensor]):
+        # Forward pass
+        output = self.logits(batch["series"])
+
+        # Compute the loss and metrics
+        loss = F.cross_entropy(
+            output[:,:,output.shape[-1]//2:],
+            batch["scs"][:,output.shape[-1]//2:], ignore_index=100)
+
+        predictions = torch.argmax(output, dim=1)
+
+        self.__getattr__("train_cm").update(predictions, batch["scs"])
+
+        # log loss and metrics
+        self.log(
+            "stage_loss", loss, on_epoch=True,
+            on_step=True, prog_bar=True, logger=True)
+
+        # return loss
+        return loss.to(torch.float32) + self.regularizer_loss()
+
+    def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
+
+        """ Inner step for the training, validation and testing. """
+
+        if stage == "train":
+            return self._inner_step_train(batch)
+
+        # Forward pass
+        output = self.logits(batch["series"]) # (n, n_classes, window_size)
+
+        # get the last value
+        output = output[:,:,-1] # (n, n_classes)
+
+        # Compute the loss and metrics
+        loss = F.cross_entropy(output, batch["label"], ignore_index=100)
+
+        predictions = torch.argmax(output, dim=1)
+
+        self.__getattr__(f"{stage}_cm").update(predictions, batch["label"])
+        if stage != "train":
+            self.probabilities.append(torch.softmax(output, dim=1))
+            self.labels.append(batch["label"])
+
+        # log loss and metrics
+        self.log(
+            f"{stage}_loss", loss, on_epoch=True,
+            on_step=stage=="train", prog_bar=True, logger=True)
+
+        return loss.to(torch.float32)

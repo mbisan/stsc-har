@@ -40,15 +40,15 @@ class CNN_TS(torch.nn.Module):
         # convolutional layer 2
         self.cnn_2 = nn.Sequential(OrderedDict([
             ("conv", nn.Conv1d(
-                in_channels=self.n_feature_maps, out_channels=self.n_feature_maps,
+                in_channels=self.n_feature_maps, out_channels=self.n_feature_maps*2,
                 kernel_size=3, padding='same')),
-            ("bn", nn.BatchNorm1d(num_features=self.n_feature_maps)),
+            ("bn", nn.BatchNorm1d(num_features=self.n_feature_maps*2)),
             ("activation", nn.ReLU())
             ]))
 
         self.last = nn.Sequential(OrderedDict([
             ("conv", nn.Conv1d(
-                in_channels=self.n_feature_maps, out_channels=self.n_feature_maps,
+                in_channels=self.n_feature_maps*2, out_channels=self.n_feature_maps*4,
                 kernel_size=1, padding="same")),
             ("activation", nn.ReLU()),
             # remove half of the feature maps in the latent space

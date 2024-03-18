@@ -5,6 +5,7 @@ from nets.encoders.CNN_ts import CNN_TS
 from nets.encoders.CNN_2d_ts import CNN_2d_TS
 from nets.encoders.encoders import RemoveUpperPart, NoLayer
 from nets.encoders.transformer import Transformer
+from nets.encoders.LSTM import RNN_ts
 
 from nets.decoders.mlp import MultiLayerPerceptron
 from nets.decoders.CNN_ts_dec import CNN_TS_dec
@@ -21,7 +22,8 @@ encoder_dict = {
     "none": NoLayer,
     "noupper": RemoveUpperPart,
     "transformer": Transformer,
-    "cnn_2d_ts": CNN_2d_TS
+    "cnn_2d_ts": CNN_2d_TS,
+    "lstm": RNN_ts
 }
 
 decoder_dict = {
