@@ -4,6 +4,12 @@ import numpy as np
 # pylint: disable=invalid-name not-an-iterable
 
 @jit(nopython=True, parallel=True)
+def fill_first_line(DM: np.array, w: float) -> None:
+    for p in prange(DM.shape[0]):
+        for j in range(1, DM.shape[2]):
+            DM[p, 0, j] += w*DM[p, 0, j-1]
+
+@jit(nopython=True, parallel=True)
 def fill_dtw(DM: np.ndarray, w: float) -> None:
     for p in prange(DM.shape[0]):
         for i in range(1, DM.shape[1]):
@@ -41,13 +47,25 @@ def compute_oDTW(
     # Compute point-wise distances
     compute_pointwise_ED2(DM, STS, patts)
 
-    np.cumsum(DM[:,0,:], axis=1, out=DM[:,0,:])
+    # incorrect computation of this value
+    # np.cumsum(DM[:,0,:], axis=1, out=DM[:,0,:])
+
+    # correct
+    fill_first_line(DM, w)
+
     np.cumsum(DM[:,:,0], axis=1, out=DM[:,:,0])
 
     fill_dtw(DM, w)
 
     # Return the DM
     return np.sqrt(DM)
+
+@jit(nopython=True, parallel=True)
+def fill_first_line_channel(DM: np.array, w: float) -> None:
+    for c in prange(DM.shape[1]):
+        for p in prange(DM.shape[0]):
+            for j in range(1, DM.shape[3]):
+                DM[p, c, 0, j] += w*DM[p, c, 0, j-1]
 
 # Channel-wise computation of the DM
 @jit(nopython=True, parallel=True)
@@ -89,8 +107,13 @@ def compute_oDTW_channel(
     # Compute point-wise distances
     compute_pointwise_ED2_channel(DM, STS, patts)
 
-    np.cumsum(DM[:,:,0,:], axis=1, out=DM[:,:,0,:])
-    np.cumsum(DM[:,:,:,0], axis=1, out=DM[:,:,:,0])
+    # incorrect computation of this value
+    # np.cumsum(DM[:,:,0,:], axis=2, out=DM[:,:,0,:])
+
+    # correct
+    fill_first_line_channel(DM, w)
+
+    np.cumsum(DM[:,:,:,0], axis=2, out=DM[:,:,:,0])
 
     fill_dtw_channel(DM, w)
 
