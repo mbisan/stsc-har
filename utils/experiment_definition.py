@@ -75,7 +75,7 @@ harth_img = {
     "window_size": 25,
     "window_stride": 2,
     "mode": "img",
-    "encoder_architecture": "cnn_gap_img",
+    "encoder_architecture": "cnn_img",
     "encoder_features": 24,
     "decoder_architecture": "mlp",
     "decoder_features": 32,
@@ -395,7 +395,7 @@ wisdm_lstm = {
 }
 
 experiments = [
-    harth_lstm, uci_lstm, wisdm_lstm
+    harth_img
     #harth_ts, harth_tr, harth_img, harth_seg, # harth_img_g,
     #uci_ts, uci_tr, uci_img, uci_seg,
     #wisdm_ts, wisdm_tr, wisdm_img, wisdm_seg

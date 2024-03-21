@@ -5,7 +5,7 @@ from collections import OrderedDict
 import torch
 from torch import nn
 
-class CNN_GAP_IMG2(torch.nn.Module):
+class CNN_GAP_IMG3(torch.nn.Module):
 
     # pylint: disable=too-many-instance-attributes
 
@@ -60,7 +60,7 @@ class CNN_GAP_IMG2(torch.nn.Module):
         x = self.cnn_1(x)
         x = self.cnn_2(x)
         x = self.last(x)
-        return x.mean(dim=-1) # global average pooling
+        return x.mean(dim=-2)
 
     def get_output_shape(self) -> torch.Size:
         x = torch.rand((1, self.channels, self.ref_size, self.wdw_size))
