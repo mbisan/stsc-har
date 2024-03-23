@@ -394,8 +394,28 @@ wisdm_lstm = {
     "encoder_layers": 2
 }
 
+uci_img_one_col = {
+    "dataset": "UCI-HAR",
+    "subjects_for_test": cross_validate["UCI-HAR"],
+    "window_size": 1,
+    "window_stride": 1,
+    "mode": "img",
+    "encoder_architecture": "none",
+    "encoder_features": 24,
+    "decoder_architecture": "mlp",
+    "decoder_features": 64,
+    "decoder_layers": 1,
+    "training_dir": "_uci_img",
+    "num_medoids": 1,
+    "compute_n": 300,
+    "pattern_type": ["med", "syn", "syn_2", "fftcoef", "fftvar", "noise"],
+    "pattern_size": 50,
+    "cached": False,
+    "rho": 0.1,
+}
+
 experiments = [
-    harth_img
+    uci_img_one_col
     #harth_ts, harth_tr, harth_img, harth_seg, # harth_img_g,
     #uci_ts, uci_tr, uci_img, uci_seg,
     #wisdm_ts, wisdm_tr, wisdm_img, wisdm_seg
