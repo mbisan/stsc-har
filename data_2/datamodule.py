@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader, WeightedRandomSampler, Sampler
 from pytorch_lightning import LightningDataModule, seed_everything
 
 from data_2.stsdataset import STSDataset
@@ -14,6 +14,31 @@ from data_2.har.label_mappings import mappings
 
 PatternConf = namedtuple("PatternConf",
     ["pattern_type", "pattern_size", "rho", "cached", "compute_n"])
+
+class CustomRandomSampler(Sampler):
+
+    '''
+        From a list of lists of indices (one list of indices per class)
+        selects all the indices from the minority class, and randomly selects
+        this same number of indices in each of the remaining classes.
+    '''
+
+    def __init__(self, indices_per_class):
+        super().__init__()
+
+        self.indices_per_class = indices_per_class
+        self.obs_per_class = min(len(indices) for indices in self.indices_per_class)
+
+    def __iter__(self):
+        selected = []
+        for indices in self.indices_per_class:
+            selected.append(np.random.choice(indices, self.obs_per_class, replace=False))
+        selected = np.concatenate(selected)
+        np.random.shuffle(selected)
+        return iter(selected.tolist())
+
+    def __len__(self):
+        return self.obs_per_class * len(self.indices_per_class)
 
 class STSDataModule(LightningDataModule):
 
@@ -128,8 +153,7 @@ class STSDataModule(LightningDataModule):
         else:
             weights = None
 
-        if triplets:
-            self.train_dataset.indices_per_class()
+        self.train_dataset.indices_per_class()
 
         if overlap>0:
             self.test_dataset.apply_overlap(overlap)
@@ -137,7 +161,12 @@ class STSDataModule(LightningDataModule):
 
         if self.reduce_train_imbalance:
             self.train_sampler = WeightedRandomSampler(
-                weights, num_samples=self.batch_size*32*self.n_classes, replacement=False)
+                weights,
+                num_samples=max(
+                        min(len(c) for c in self.train_dataset.per_class), 5000
+                    )*self.n_classes,
+                replacement=False)
+            print(f"Sampling {self.train_sampler.num_samples} balanced samples")
 
     def train_dataloader(self) -> DataLoader:
         """ Returns the training DataLoader. """
