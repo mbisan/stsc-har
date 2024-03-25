@@ -198,6 +198,9 @@ class STSDataset(Dataset):
             indices = (self.labels == c).nonzero()[0]
             self.per_class.append(indices)
 
+    def apply_overlap(self, overlap: int) -> None:
+        self.indices = self.indices[::(self.wsize-overlap)]
+
     def __len__(self) -> int:
         return self.indices.shape[0]
 

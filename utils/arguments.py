@@ -8,7 +8,7 @@ def get_parser():
         decoder_architecture, max_epochs, lr, decoder_features, encoder_features
         decoder_layers, mode, reduce_imbalance, label_mode, num_medoids, voting
         rho, pattern_type, overlap, mtf_bins, training_dir, n_val_subjects, cached
-        weight_decayL1, weight_decayL2, pooling
+        weight_decayL1, weight_decayL2, pooling, cf, encoder_layers, use_triplets
     '''
     parser = ArgumentParser()
 
@@ -58,7 +58,7 @@ def get_parser():
     parser.add_argument("--rho", default=0.1, type=float,
         help="""Parameter of the online-dtw algorithm
         the window_size-th root is used as the voting parameter""")
-    parser.add_argument("--pattern_type", type=str, default="med",
+    parser.add_argument("--pattern_type", type=str, default=None,
         help="Type of pattern to use during DM computation") # pattern types: "med"
     parser.add_argument("--overlap", default=-1, type=int,
         help="""Overlap of observations between training and test examples
@@ -83,37 +83,34 @@ def get_parser():
         help="Same class windows only for training")
     parser.add_argument("--encoder_layers", type=int, default=1,
         help="Layers of encoder")
+    parser.add_argument("--use_triplets", action="store_true",
+        help="Return (random) triplets when accessing dataset")
+    parser.add_argument("--random_seed", type=int, default=42,
+        help="Random seed set for RNGs")
 
     return parser
 
 
 def get_model_name(args):
-    modelname = f"{args.mode}|{args.dataset}," + \
-                '-'.join([str(subject) for subject in args.subjects_for_test]) + \
-                 f"|{args.n_val_subjects}|" \
-                f"{args.window_size},{args.window_stride}|bs{args.batch_size}" + \
-                f"_lr{args.lr}_l1{args.weight_decayL1}_l2{args.weight_decayL2}|" + \
-                f"{args.encoder_architecture}{args.encoder_features}|" + \
-                f"{args.decoder_architecture}{args.decoder_features},{args.decoder_layers}|" + \
-                (f"m{args.label_mode}|" if args.label_mode > 1 else "") + \
-                (f"v{args.voting},{args.rho}|" if args.voting != 1 else "") + \
-                (f"ov{args.overlap}|" if args.overlap >= 0 else "")
+    modelname = ""
 
-    if args.mode in ["img", "dtw", "dtw_c"]:
-        modelname += f"p{args.pattern_size},r{args.rho}|"
-    if args.mode == "img":
-        modelname += f"med{args.num_medoids},{args.compute_n}|" if args.pattern_type == "med" \
-                    else f"{args.pattern_type}{args.compute_n}|"
-    if args.mode == "mtf":
-        modelname += f"bin{args.mtf_bins}|"
-    if args.mode == "seg":
-        modelname += f"{ '-'.join([str(rate) for rate in args.pooling])}_{args.cf}|" + \
-            f"ks{args.pattern_size}|"
+    for element, value in args.__dict__.items():
+        if element in ["command", "ram", "cpus", "dataset_dir", "training_dir"]:
+            continue
+        if isinstance(value, bool):
+            if value:
+                modelname += f"{element[0]}"
+        elif isinstance(value, list):
+            modelname += f"{element[0]}"
+            modelname += '-'.join([str(val) for val in value])
+        elif isinstance(value, int):
+            modelname += f"{element[0]}{value}"
+        elif isinstance(value, str):
+            modelname += f"{value}"
+        elif isinstance(value, float):
+            modelname += f"{element[0]}{value:.1E}"
 
-    if "clr" in args.mode or args.mode == "ae":
-        modelname += f"decay{args.cf}|"
-
-    return modelname[:-1]
+    return modelname
 
 
 def get_command(args):

@@ -53,7 +53,7 @@ class DFDataset(STSDataset):
         print("hash of patterns:", cache_id)
 
         for s in range(self.splits.shape[0] - 1):
-            DM = self._compute_dm(self.patterns, self.splits[s:s+2])
+            DM = self._compute_dm(self.patterns, self.splits[s:s+2]) / self.patterns.shape[-1]
             self.DM.append(DM)
 
         self.n_patterns = self.DM[0].shape[1]

@@ -34,6 +34,7 @@ class STSDataModule(LightningDataModule):
             same_class: bool = False,
             subjects_for_test: List[int] = None,
             n_val_subjects: int = 2,
+            overlap: int = -1,
             patterns = PatternConf(None, None, .1, False, 300),
             triplets: bool = False
             ) -> None:
@@ -126,6 +127,13 @@ class STSDataModule(LightningDataModule):
             weights = self.train_dataset.set_same_class_indices()
         else:
             weights = None
+
+        if triplets:
+            self.train_dataset.indices_per_class()
+
+        if overlap>0:
+            self.test_dataset.apply_overlap(overlap)
+            self.val_dataset.apply_overlap(overlap)
 
         if self.reduce_train_imbalance:
             self.train_sampler = WeightedRandomSampler(
