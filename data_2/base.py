@@ -1,7 +1,7 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import numpy as np
-import torch
+from scipy import stats
 
 from torch.utils.data import Dataset
 
@@ -14,8 +14,10 @@ class STSDataset(Dataset):
             wsize: int = 10,
             wstride: int = 1,
             minmax: Tuple[np.ndarray, np.ndarray] = None,
+            label_mapping: np.ndarray = np.arange(256, dtype=np.int64),
+            label_mode: int = 0,
             feature_group: List[np.ndarray] = None,
-            label_mapping: np.ndarray = np.arange(256, dtype=np.int64)
+            triplets: bool = False
             ) -> None:
         '''
             Base class for STS dataset
@@ -27,8 +29,15 @@ class STSDataset(Dataset):
                 wstride: window stride
                 minmax: minmax values to use to scale data
                 feature_group: groups of features, i.e. for different sensors
+
+            indices are initialized to all the possible windows on every sts
         '''
         super().__init__()
+
+        self.wsize = wsize
+        self.wstride = wstride
+        self.label_mode = label_mode
+        self.get_triplets = triplets
 
         splits = np.concatenate(
             [np.array([sts.shape[0] for sts, _ in user]) for user in data])
@@ -42,9 +51,6 @@ class STSDataset(Dataset):
         self.labels = label_mapping[np.concatenate(
             [np.concatenate([lbl.astype(np.int64) for _, lbl in user]) for user in data]
         )]
-
-        self.wsize = wsize
-        self.wstride = wstride
 
         self.indices = np.array([])
 
@@ -62,6 +68,17 @@ class STSDataset(Dataset):
         # dict with groups of features i.e. [np.array([0, 1, 2]), np.array([3, 4, 5])]
         self.feature_group = feature_group
 
+        self.label_mapping = label_mapping
+
+        self.indices = None
+        self.id_to_split = None
+        self.set_indices() # init indices
+
+        self.per_class: List[np.ndarray] = None
+        self.per_class_id_to_split: List[np.ndarray] = None
+
+    def set_indices(self) -> None:
+        # initialized self.indices and self.id_to_split
         self.indices = np.arange(self.labels.shape[0], dtype=np.int64)
 
         # remove initial and unlabeled window indices
@@ -70,55 +87,131 @@ class STSDataset(Dataset):
         self.indices[self.labels == 100] = 0 # remove observations with no label
         self.indices = self.indices[np.nonzero(self.indices)]
 
-    def __len__(self):
-        return self.indices.shape[0]
+        self.id_to_split = np.searchsorted(self.splits, self.indices) - 1
 
-    def __getitem__(self, index: int) -> tuple[np.ndarray, np.ndarray]:
+    def set_same_class_indices(self) -> None:
+        # sets self.indices and self.id_to_split with windows of the same class
+        same_class = self.same_class_window()
+        self.indices = same_class
 
-        first = self.indices[index] - self.wsize*self.wstride + self.wstride
-        last = self.indices[index] + 1
+        self.id_to_split = np.searchsorted(self.splits, self.indices) - 1
 
-        return self.stream[first:last:self.wstride], self.labels[first:last:self.wstride]
+    def points_to_remove(self) -> np.ndarray:
+        splits_remove = np.tile(self.splits, (self.wsize, 1))
+        for i in range(self.wsize):
+            splits_remove[i] += i
+        return splits_remove
 
-    def getSameClassWindowIndex(self, return_mask=False):
-        # returns array with positions in the indices with same class windows
+    def reduce_imbalance(self) -> np.ndarray:
+        # sets self.indices and self.id_to_split and returns the weights for each class
+        same_class_windows = self.same_class_window()
+        window_labels = self.labels[same_class_windows]
+        change_points = self.change_points()
+
+        change_points = np.tile(change_points, (3, 1))
+        for i in range(3):
+            change_points[i] += (i+1)*(self.wsize//6)
+        change_points = change_points.reshape(-1)
+
+        change_points = change_points[self.labels[change_points] != 100]
+        change_points = change_points[~np.isin(change_points, self.points_to_remove())]
+
+        weights = np.empty_like(same_class_windows, dtype=np.float64)
+
+        unique, counts = np.unique(window_labels, return_counts=True)
+        assert not 100 in unique
+
+        for i, c in enumerate(unique):
+            weights[window_labels == c] = 1 / counts[i]
+
+        indices = np.concatenate([same_class_windows, change_points])
+        weights = np.concatenate(
+            [weights, np.full_like(change_points, 1/change_points.shape[0], dtype=np.float64)])
+
+        self.indices = indices
+        self.id_to_split = np.searchsorted(self.splits, self.indices) - 1
+
+        return weights
+
+    def same_class_window(self) -> np.ndarray:
+        # returns array with positions in the sts with same class windows
         diff = np.diff(self.labels)
         ids = np.concatenate(([0], np.nonzero(diff)[0], [self.stream.shape[0]]))
 
         temp_indices = np.zeros_like(self.labels, dtype=np.bool_)
 
-        offset = self.wsize*self.wstride
+        offset = self.wsize*self.wstride + 1
         for i in range(ids.shape[0]-1):
             if ids[i+1] - ids[i] >= offset:
                 temp_indices[(ids[i] + offset):(ids[i+1]+1)] = True
 
-        indices_new = temp_indices[self.indices]
+        indices = np.nonzero(temp_indices)[0]
+        valid = indices[self.labels[indices] != 100]
 
-        if return_mask:
-            return indices_new
+        valid = valid[~np.isin(valid, self.points_to_remove())]
 
-        sameClassWindowIndex = np.arange(self.indices.shape[0])[indices_new]
+        return valid
 
-        return sameClassWindowIndex, self.labels[self.indices[sameClassWindowIndex]]
-
-    def getChangePointIndex(self):
-        # returns array with positions in the indices with change points
+    def change_points(self) -> np.ndarray:
+        # returns array with positions in the sts with change points
         diff = np.diff(self.labels)
-        ids = np.nonzero(diff)[0]
+        indices = np.nonzero(diff)[0]
+        indices = indices[self.labels[indices] != 100]
 
-        temp_indices = np.zeros_like(self.labels, dtype=np.bool_)
-        temp_indices[ids] = True
+        valid = indices[~np.isin(indices, self.points_to_remove())]
 
-        indices_new = temp_indices[self.indices]
-        changePointIndex = np.arange(self.indices.shape[0])[indices_new]
+        return valid
 
-        return changePointIndex
+    def indices_per_class(self) -> None:
+        # sets the per_class variable to the indices of each class
+        unique = np.unique(self.labels[self.same_class_window()])
+        assert not 100 in unique
 
-    def getIndicesByClass(self):
-        window_id, window_lb = self.getSameClassWindowIndex()
+        self.per_class = []
+        self.per_class_id_to_split = []
+        for c in unique:
+            indices = (self.labels == c).nonzero()[0]
+            self.per_class.append(indices)
+            self.per_class_id_to_split.append(np.searchsorted(self.splits, indices) - 1)
 
-        clr_indices = []
-        for cl in np.unique(window_lb):
-            clr_indices.append(window_id[window_lb==cl])
+    def __len__(self) -> int:
+        return self.indices.shape[0]
 
-        return clr_indices
+    def triplet(self, c: int) -> Tuple[np.ndarray, np.ndarray]:
+        # get the close and far samples for triplet/contrastive learning
+
+        close_id = np.random.choice(self.per_class[c], 1).item()
+        far_cl = (np.random.choice(len(self.per_class) - 1) + c + 1) % len(self.per_class)
+
+        # el sampleo del negativo (far_cl) está bien, cualquier carencia es debido al modelo
+        far_id = np.random.choice(self.per_class[far_cl], 1).item()
+
+        close_first = close_id - self.wsize*self.wstride + self.wstride
+        close_last = close_id + 1
+
+        far_first = far_id - self.wsize*self.wstride + self.wstride
+        far_last = far_id + 1
+
+        return (
+            self.stream[close_first:close_last],
+            self.stream[far_first:far_last]
+        )
+
+    def __getitem__(self, index: int) -> Dict[str, np.ndarray]:
+        pos = self.indices[index]
+
+        first = pos - self.wsize*self.wstride + self.wstride
+        last = pos + 1
+
+        scs = self.labels[first:last:self.wstride]
+        if self.label_mode > 1:
+            c = stats.mode(scs[-self.label_mode:])
+        else:
+            c = scs[-1]
+
+        return {
+            "series": self.stream[first:last:self.wstride],
+            "scs": scs,
+            "label": c,
+            "triplet": self.triplet(c) if self.get_triplets else None
+        }
