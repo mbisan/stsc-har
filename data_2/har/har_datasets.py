@@ -32,5 +32,3 @@ def load_dataset(dataset_dir: str) -> List[List[Tuple[np.ndarray, np.ndarray]]]:
             )
 
     return dataset
-
-load_dataset("./datasets/UCI-HAPT")

@@ -1,22 +1,24 @@
 import numpy as np
-from utils.pattern_extract import (
-    sts_medoids, process_fft, process_fft_frequencies, get_predominant_frequency)
+from data_2.df.pattern_extract import (
+    sts_medoids, process_fft_frequencies)
 
-def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
+def get_patterns(pattern_type, pattern_size, compute_n, sts, scs):
     if pattern_type == "med":
         print("Computing medoids...")
-        meds = sts_medoids(ds, pattern_size=pattern_size, meds_per_class=num_medoids, n=compute_n)
+        meds = sts_medoids(
+            sts, scs, pattern_size=pattern_size, meds_per_class=1, n=compute_n)
     if pattern_type == "med_mean":
         print("Computing medoids...")
-        meds = sts_medoids(ds, pattern_size=pattern_size, meds_per_class=num_medoids, n=compute_n)
+        meds = sts_medoids(
+            sts, scs, pattern_size=pattern_size, meds_per_class=1, n=compute_n)
         meds = np.mean(meds, axis=0, keepdims=True)
     elif pattern_type == "noise":
         print("Using gaussian noise...")
-        meds = np.random.randn(np.sum(np.unique(ds.SCS)!=100), ds.STS.shape[0], pattern_size)
+        meds = np.random.randn(np.sum(np.unique(scs)!=100), sts.shape[0], pattern_size)
         print(meds.shape)
     elif pattern_type == "noise_1":
         print("Using gaussian noise...")
-        meds = np.random.randn(1, ds.STS.shape[0], pattern_size)
+        meds = np.random.randn(1, sts.shape[0], pattern_size)
         print(meds.shape)
     elif pattern_type == "noise_c":
         print("Using gaussian noise...")
@@ -48,23 +50,6 @@ def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
         # sigma = 0.2*0.2 = 0.04 (std)
         meds[1,:] = np.linspace(1, -1, pattern_size) + 0.2 * np.random.randn(pattern_size)
         meds[2,:] = 0.1 * np.random.randn(pattern_size)
-    elif pattern_type == "freq":
-        print("Using sinusoidal with predominant frequencies...")
-        fft_mag = process_fft(ds.STS, ds.SCS)
-        pred_freq = get_predominant_frequency(fft_mag, mode="per_class")
-        meds = np.empty((pred_freq.shape[0], pred_freq.shape[1], pattern_size))
-        for i in range(pred_freq.shape[0]):
-            for j in range(pred_freq.shape[1]):
-                meds[i, j, :] = np.sin(2*np.pi* pred_freq[i, j] *np.arange(pattern_size))
-    elif pattern_type == "freq_c":
-        print("Using sinusoidal with predominant frequencies per channel...")
-        fft_mag = process_fft(ds.STS, ds.SCS)
-        pred_freq = get_predominant_frequency(fft_mag, mode="per_channel")
-        # shape (freqs, 2) i,e, value, magnitude
-        num_waves = 3
-        meds = np.empty((num_waves, pattern_size))
-        for i in range(num_waves):
-            meds[i, :] = np.sin(2*np.pi* pred_freq[i, 0] *np.arange(pattern_size))
     elif pattern_type == "f1":
         meds = np.empty((1, pattern_size))
         meds[0,:] = np.sin(2*np.pi* np.arange(pattern_size) * 1/pattern_size) # one cycle
@@ -94,12 +79,12 @@ def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
     elif pattern_type == "fftcoef":
         print("Using fft coefficients for the pattern...")
         pattern_freq = np.fft.fftfreq(pattern_size)[:pattern_size//2]
-        fft_coef = process_fft_frequencies(ds.STS, ds.SCS, pattern_freq)
+        fft_coef = process_fft_frequencies(sts, scs, pattern_freq)
 
         if 100 in fft_coef:
             del fft_coef[100] # remove the ignore label
 
-        meds = np.zeros((len(fft_coef.keys()), ds.STS.shape[0], pattern_size))
+        meds = np.zeros((len(fft_coef.keys()), sts.shape[1], pattern_size))
         # num_classes, channel, pattern_size
 
         for i, coef in enumerate(fft_coef.values()):
@@ -110,14 +95,14 @@ def get_patterns(pattern_type, pattern_size, num_medoids, compute_n, ds):
     elif pattern_type == "fftvar":
         print("Using fft coefficient variances across classes for the pattern...")
         pattern_freq = np.fft.fftfreq(pattern_size)[:pattern_size//2]
-        fft_coef = process_fft_frequencies(ds.STS, ds.SCS, pattern_freq)
+        fft_coef = process_fft_frequencies(sts, scs, pattern_freq)
 
         if 100 in fft_coef:
             del fft_coef[100] # remove the ignore label
 
         # compute variance across classes
         fft_coef_all = np.zeros(
-            (len(fft_coef.keys()), ds.STS.shape[0], pattern_freq.shape[0]), dtype=np.complex128)
+            (len(fft_coef.keys()), sts.shape[1], pattern_freq.shape[0]), dtype=np.complex128)
         for i, v in enumerate(fft_coef.values()):
             fft_coef_all[i, :, :] = v
 
