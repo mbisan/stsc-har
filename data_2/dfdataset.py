@@ -123,6 +123,6 @@ class DFDataset(STSDataset):
             "series": self.stream[first:last:self.wstride].T,
             "scs": scs,
             "label": c,
-            "df": df,
-            **(self.triplet(c) if self.get_triplets else {"triplet": 0, "df_triplet": 0})
+            "frame": df,
+            **(self.triplet(c) if self.get_triplets else {"triplet": 0, "frame_triplet": 0})
         }
