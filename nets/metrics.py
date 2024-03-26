@@ -2,7 +2,7 @@ import torch
 
 # pylint: disable=invalid-name
 
-def metrics_from_cm(cm):
+def metrics_from_cm(cm: torch.Tensor):
     TP = cm.diag()
     FP = cm.sum(0) - TP
     FN = cm.sum(1) - TP
@@ -16,7 +16,18 @@ def metrics_from_cm(cm):
     iou = TP/(TP+FP+FN) # iou per class
     accuracy = (TP + TN)/(TP + FP + FN + TN)
 
-    return {"precision": precision, "recall": recall, "f1": f1, "iou": iou, "accuracy": accuracy}
+    weights = cm.sum(dim=1)/cm.sum()
+    print(weights)
+    w_pr = (precision * weights).sum().item()
+    w_re = (recall * weights).sum().item()
+    w_f1 = (f1 * weights).sum().item()
+    w_iou = (iou * weights).sum().item()
+    w_acc = (accuracy * weights).sum().item()
+    o_acc = (TP.sum()/cm.sum()).item()
+
+    return {
+        "precision": precision, "recall": recall, "f1": f1, "iou": iou, "accuracy": accuracy,
+        "o-acc": o_acc, "w_pr": w_pr, "w_re": w_re, "w_f1": w_f1, "w_iou": w_iou, "w_acc": w_acc}
 
 def print_cm(cm, num_classes):
     cm=cm/cm.sum(1, keepdim=True)
