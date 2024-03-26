@@ -6,11 +6,11 @@ import numpy as np
 from torch.utils.data import DataLoader, WeightedRandomSampler, Sampler
 from pytorch_lightning import LightningDataModule, seed_everything
 
-from data_2.stsdataset import STSDataset
-from data_2.dfdataset import DFDataset
-from data_2.har.har_datasets import load_dataset
+from data.stsdataset import STSDataset
+from data.dfdataset import DFDataset
+from data.har.har_datasets import load_dataset
 
-from data_2.har.label_mappings import mappings
+from data.har.label_mappings import mappings
 
 PatternConf = namedtuple("PatternConf",
     ["pattern_type", "pattern_size", "rho", "cached", "compute_n"])

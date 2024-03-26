@@ -10,8 +10,8 @@ from pytorch_lightning import Trainer, seed_everything, LightningModule
 #     timestr = f"{int(b//3600):02d}:{int((b%3600)//60):02d}"
 #     return timestr + f":{int((b%3600)%60):02d}.{int(round(b%1, 3)*1000):03d}"
 
-from data_2.dfdataset import PatternConf
-from data_2.datamodule import STSDataModule
+from data.dfdataset import PatternConf
+from data.datamodule import STSDataModule
 from utils.arguments import Arguments
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #

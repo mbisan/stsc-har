@@ -119,6 +119,12 @@ pamap2_all_activity_recognition = np.array(
     -1, 100, 100, 100, 7, 8, -1, -1, 9,
     10, 100, 100, 100, -1, -1, -1, 11], dtype=np.int64)
 
+mappings = {
+    "HARTH": harth_label_mapping,
+    "UCI-HAPT": ucihar_label_mapping,
+    "WISDM": np.arange(6)
+}
+
 if __name__ == "__main__":
     for i, val in PAMAP2_LABELS.items():
         print(val, pamap2_basic_activity_recognition[i])

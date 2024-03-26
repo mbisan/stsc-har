@@ -1,5 +1,5 @@
 import numpy as np
-from data_2.df.pattern_extract import (
+from data.df.pattern_extract import (
     sts_medoids, process_fft_frequencies)
 
 def get_patterns(pattern_type, pattern_size, compute_n, sts, scs):
