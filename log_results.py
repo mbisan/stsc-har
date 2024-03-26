@@ -20,7 +20,7 @@ import json
 
 import numpy as np
 import torch
-from nets.metrics import print_cm, metrics_from_cm, group_classes
+from utils.metrics import print_cm, metrics_from_cm, group_classes
 
 def log_csv(entries, loaded):
     loaded_sorted_names = list(loaded.keys())

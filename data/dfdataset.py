@@ -9,7 +9,7 @@ from scipy import stats
 
 from data.stsdataset import STSDataset
 from data.df.patterns import get_patterns
-from transforms.odtw import compute_oDTW, compute_oDTW_channel
+from utils.transforms.odtw import compute_oDTW, compute_oDTW_channel
 
 # pylint: disable=invalid-name too-many-instance-attributes too-many-arguments
 

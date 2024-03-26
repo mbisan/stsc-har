@@ -7,7 +7,7 @@ import torch.nn as nn
 
 from sklearn.metrics import average_precision_score, roc_curve, auc
 
-from transforms.gaf_mtf import GAFLayer, MTFLayer
+from utils.transforms.gaf_mtf import GAFLayer, MTFLayer
 
 from nets import encoder_dict, decoder_dict, segmentation_dict
 from nets.baseWrapper import BaseWrapper

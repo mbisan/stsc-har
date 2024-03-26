@@ -12,10 +12,10 @@ import torch
 
 from pytorch_lightning import Trainer
 
-from utils.helper_functions import load_dm
+from utils.methods import load_dm
+from utils.metrics import print_cm, metrics_from_cm, group_classes
 
-from nets.wrapper import ContrastiveWrapper, DFWrapper
-from nets.metrics import print_cm, metrics_from_cm, group_classes
+from nets.wrapper import ContrastiveWrapper, ClassifierWrapper
 
 # shut up warnings
 warnings.simplefilter("ignore", category=UserWarning)
@@ -80,7 +80,7 @@ def evaluate_model(cpmodel_cp, clsmodel_cp, trainer: Trainer):
     cp_model.eval()
     trainer.test(datamodule=dm, model=cp_model, verbose=False)
 
-    classifier = DFWrapper.load_from_checkpoint(checkpoint_path=clsmodel_cp)
+    classifier = ClassifierWrapper.load_from_checkpoint(checkpoint_path=clsmodel_cp)
 
     wsize = args.window_size
     ovlp = 0

@@ -12,7 +12,7 @@ from torch import nn
 from pytorch_lightning import LightningModule
 import torchmetrics as tm
 
-from nets.metrics import metrics_from_cm
+from utils.metrics import metrics_from_cm
 
 # pylint: disable=too-many-instance-attributes
 
