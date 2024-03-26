@@ -1,6 +1,6 @@
 cross_validate = {
     "HARTH": [[i] for i in range(22)],
-    "UCI-HAR": [[i] for i in range(30)],
+    "UCI-HAPT": [[i] for i in range(30)],
     "WISDM": [[i] for i in range(36)],
     "PAMAP2": [[i] for i in range(9)],
     "MHEALTH": [[i] for i in range(10)],
@@ -42,8 +42,8 @@ harth_ts = {
 }
 
 uci_ts = {
-    "dataset": "UCI-HAR",
-    "subjects_for_test": cross_validate["UCI-HAR"],
+    "dataset": "UCI-HAPT",
+    "subjects_for_test": cross_validate["UCI-HAPT"],
     "window_size": 50,
     "window_stride": 1,
     "mode": "ts",
@@ -112,8 +112,8 @@ harth_img_g = {
 }
 
 uci_img = {
-    "dataset": "UCI-HAR",
-    "subjects_for_test": cross_validate["UCI-HAR"],
+    "dataset": "UCI-HAPT",
+    "subjects_for_test": cross_validate["UCI-HAPT"],
     "window_size": 25,
     "window_stride": 2,
     "mode": "img",
@@ -167,8 +167,8 @@ harth_tr = {
 }
 
 uci_tr = {
-    "dataset": "UCI-HAR",
-    "subjects_for_test": cross_validate["UCI-HAR"],
+    "dataset": "UCI-HAPT",
+    "subjects_for_test": cross_validate["UCI-HAPT"],
     "window_size": 50,
     "window_stride": 1,
     "mode": ["gasf", "gadf", "mtf"],
@@ -215,8 +215,8 @@ harth_seg = {
 }
 
 uci_seg = {
-    "dataset": "UCI-HAR",
-    "subjects_for_test": cross_validate["UCI-HAR"],
+    "dataset": "UCI-HAPT",
+    "subjects_for_test": cross_validate["UCI-HAPT"],
     "window_size": 128,
     "window_stride": 1,
     "mode": "seg",
@@ -251,8 +251,8 @@ wisdm_seg = {
 }
 
 uci_clr = {
-    "dataset": "UCI-HAR",
-    "subjects_for_test": cross_validate["UCI-HAR"],
+    "dataset": "UCI-HAPT",
+    "subjects_for_test": cross_validate["UCI-HAPT"],
     "window_size": 40,
     "window_stride": 1,
     "mode": "clr",
@@ -268,8 +268,8 @@ uci_clr = {
 }
 
 uci_seg_class = {
-    "dataset": "UCI-HAR",
-    "subjects_for_test": cross_validate["UCI-HAR"],
+    "dataset": "UCI-HAPT",
+    "subjects_for_test": cross_validate["UCI-HAPT"],
     "window_size": 50,
     "window_stride": 1,
     "mode": "ts",
@@ -365,8 +365,8 @@ harth_lstm = {
 }
 
 uci_lstm = {
-    "dataset": "UCI-HAR",
-    "subjects_for_test": cross_validate["UCI-HAR"],
+    "dataset": "UCI-HAPT",
+    "subjects_for_test": cross_validate["UCI-HAPT"],
     "window_size": 50,
     "window_stride": 1,
     "mode": "lstm",
@@ -395,8 +395,8 @@ wisdm_lstm = {
 }
 
 uci_img_one_col = {
-    "dataset": "UCI-HAR",
-    "subjects_for_test": cross_validate["UCI-HAR"],
+    "dataset": "UCI-HAPT",
+    "subjects_for_test": cross_validate["UCI-HAPT"],
     "window_size": 1,
     "window_stride": 1,
     "mode": "img",
