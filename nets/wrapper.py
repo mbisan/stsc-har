@@ -51,7 +51,7 @@ def get_encoder(
                 channels=n_dims, ref_size=args.window_size,
                 wdw_size=args.window_size, n_feature_maps=args.encoder_features),
             GAFLayer(args.mode, (-1, 1)) )
-    if args.mode == "lstm":
+    if args.mode == "rnn":
         return (
             "series",
             encoder_dict[args.encoder_architecture](

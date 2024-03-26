@@ -155,7 +155,7 @@ class STSDataModule(LightningDataModule):
 
         self.train_dataset.indices_per_class()
 
-        if overlap>0:
+        if overlap>=0:
             self.test_dataset.apply_overlap(overlap)
             self.val_dataset.apply_overlap(overlap)
 

@@ -18,13 +18,13 @@ from nets.segmentation.utime import UTime
 
 encoder_dict = {
     "cnn_gap_img": CNN_GAP_IMG,
-    "cnn_gap_img2": CNN_GAP_IMG2,
-    "cnn_gap_img3": CNN_GAP_IMG3,
+    "cnn_gap_img2": CNN_GAP_IMG2, # avg pooling on the time dimension
+    "cnn_gap_img3": CNN_GAP_IMG3, # avg pooling on the pattern dimension
     "cnn_img": CNN_IMG,
     "cnn_gap_ts": CNN_GAP_TS,
     "cnn_ts": CNN_TS,
     "none": NoLayer,
-    "noupper": RemoveUpperPart,
+    "noupper": RemoveUpperPart, # only use the last row of the df
     "transformer": Transformer,
     "cnn_2d_ts": CNN_2d_TS,
     "lstm": LSTM_ts
