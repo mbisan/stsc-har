@@ -162,8 +162,8 @@ class STSDataModule(LightningDataModule):
         if self.reduce_train_imbalance:
             self.train_sampler = WeightedRandomSampler(
                 weights,
-                num_samples=max(
-                        min(len(c) for c in self.train_dataset.per_class), 5000
+                num_samples=min(
+                        min(len(c) for c in self.train_dataset.per_class), 15000
                     )*self.n_classes,
                 replacement=False)
             print(f"Sampling {self.train_sampler.num_samples} balanced samples")

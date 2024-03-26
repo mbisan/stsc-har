@@ -30,7 +30,7 @@ source $HOME/.bashrc
 source activate dev2
 '''
     for args in args_list:
-        command = f"\npython {args.command} {get_command(args)}"
+        command += f"\npython {args.command} {get_command(args)}"
 
     job += command
     return jobname, job, command
