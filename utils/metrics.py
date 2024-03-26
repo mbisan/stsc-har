@@ -17,7 +17,6 @@ def metrics_from_cm(cm: torch.Tensor):
     accuracy = (TP + TN)/(TP + FP + FN + TN)
 
     weights = cm.sum(dim=1)/cm.sum()
-    print(weights)
     w_pr = (precision * weights).sum().item()
     w_re = (recall * weights).sum().item()
     w_f1 = (f1 * weights).sum().item()
