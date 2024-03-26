@@ -7,92 +7,147 @@ import torch.nn as nn
 
 from sklearn.metrics import average_precision_score, roc_curve, auc
 
-from transforms.dtw import dtw_mode
+from transforms.gaf_mtf import GAFLayer, MTFLayer
 
 from nets import encoder_dict, decoder_dict, segmentation_dict
 from nets.baseWrapper import BaseWrapper
 from nets.losses import SupConLoss, TripletLoss
 
+from utils.arguments import Arguments
+
 # pylint: disable=too-many-ancestors too-many-arguments too-many-locals
 
-class DFWrapper(BaseWrapper):
+def get_encoder(
+        n_dims, n_classes, n_patterns, l_patterns, args: Arguments, **kwargs
+    ):
+    '''
+        Returns tuple with:
+            data source, encoder nn.Module, initial transform nn.module
+    '''
+    # pylint: disable=unused-argument too-many-return-statements
+    if args.mode=="df":
+        return (
+            "frame", 
+            encoder_dict[args.encoder_architecture](
+                channels=n_patterns, ref_size=l_patterns,
+                wdw_size=args.window_size, n_feature_maps=args.encoder_features), None)
+    if args.mode=="ts":
+        return (
+            "series", 
+            encoder_dict[args.encoder_architecture](
+                channels=n_dims, ref_size=1,
+                wdw_size=args.window_size, n_feature_maps=args.encoder_features), None)
+    if args.mode == "mtf":
+        return (
+            "series",
+            encoder_dict[args.encoder_architecture](
+                channels=n_dims, ref_size=args.window_size,
+                wdw_size=args.window_size, n_feature_maps=args.encoder_features),
+            MTFLayer(args.mtf_bins, (-1, 1)) )
+    if args.mode in ["gasf", "gadf"]:
+        return (
+            "series",
+            encoder_dict[args.encoder_architecture](
+                channels=n_dims, ref_size=args.window_size,
+                wdw_size=args.window_size, n_feature_maps=args.encoder_features),
+            GAFLayer(args.mode, (-1, 1)) )
+    if args.mode == "lstm":
+        return (
+            "series",
+            encoder_dict[args.encoder_architecture](
+                channels=n_dims, latent_size=args.encoder_features, n_layers=args.encoder_layers),
+            None )
+    # TODO
+    if args.mode=="fft":
+        return (
+            "series", 
+            encoder_dict[args.encoder_architecture](
+                channels=n_dims, ref_size=1,
+                wdw_size=args.window_size, n_feature_maps=args.encoder_features), None)
+    if args.mode=="dtw":
+        return (
+            "series",
+            None, None)
+    if args.mode=="dtw_c":
+        return (
+            "series",
+            None, None)
+    if args.mode == "dtwfeats":
+        return (
+            "series",
+            None, None)
+    if args.mode == "dtwfeats_c":
+        return (
+            "series",
+            None, None)
+    if args.mode == "seg":
+        if args.encoder_architecture == "utime":
+            return (
+                "series",
+                segmentation_dict["utime"](n_classes=n_classes, in_dims=n_dims,
+                    depth = len(args.pooling), dilation = 1, kernel_size = args.pattern_size,
+                    padding = "same", init_filters = args.encoder_features,
+                    complexity_factor = args.cf, pools = args.pooling,
+                    segment_size = 1, change_size = args.pattern_size), None)
+        return (
+            "series",
+            segmentation_dict[args.encoder_architecture](
+                n_dims, n_classes, args.encoder_features, args.pooling
+            ), None)
+    return None
+
+def get_decoder(n_dims, n_classes, inp_feats, args: Arguments, **kwargs):
+    '''
+        Returns tuple with:
+            label source, decoder nn.Module, label transform
+    '''
+    # pylint: disable=unused-argument too-many-return-statements
+    lbsrc = "label"
+    if args.mode in ["seg"]:
+        lbsrc = "scs"
+
+    return (
+        lbsrc, decoder_dict[args.decoder_architecture](
+            inp_feats = torch.prod(torch.tensor(inp_feats)),
+            hid_feats = args.decoder_features, out_feats = n_classes,
+            hid_layers = args.decoder_layers))
+
+
+class ClassifierWrapper(BaseWrapper):
 
     # pylint: disable=unused-argument unnecessary-dunder-call arguments-differ
 
-    def __init__(self, mode, encoder_arch, decoder_arch,
-        n_dims, n_classes, n_patterns, l_patterns,
-        wdw_len, wdw_str,
-        enc_feats, dec_feats, dec_layers, lr, voting,
-        weight_decayL1, weight_decayL2,
-        name="test", **kwargs) -> None:
+    def __init__(self,
+        n_dims, n_classes, n_patterns, l_patterns, args: Arguments, name="test", **kwargs) -> None:
 
         # save parameters as attributes
         super().__init__(
-            lr, weight_decayL1, weight_decayL2,
+            args.lr, args.weight_decayL1, args.weight_decayL2,
             n_classes, **kwargs)
 
         self.__dict__.update(locals())
-        self.voting = None
         self.save_hyperparameters()
 
-        # create encoder
-        if mode == "img":
-            ref_size, channels = l_patterns, n_patterns
-            self.dsrc = "frame"
-        elif mode == "ts":
-            ref_size, channels = 1, n_dims
-            self.dsrc = "series"
-        elif mode == "fft":
-            ref_size, channels = 1, n_dims*2
-            self.dsrc = "transformed"
-        elif mode == "dtw":
-            ref_size, channels = l_patterns, enc_feats
-            self.wdw_len = wdw_len-l_patterns
-            self.dsrc = "series"
-        elif mode == "dtw_c":
-            ref_size, channels = l_patterns, enc_feats*n_dims
-            self.wdw_len = wdw_len-l_patterns
-            self.dsrc = "series"
-        elif mode == "dtwfeats":
-            ref_size, channels = 1, enc_feats
-            self.wdw_len = 1
-            self.dsrc = "series"
-        elif mode == "dtwfeats_c":
-            ref_size, channels = n_dims, enc_feats
-            self.wdw_len = 1
-            self.dsrc = "series"
-        elif mode in ["mtf", "gasf", "gadf", "cwt_test"]:
-            ref_size, channels = wdw_len, n_dims
-            self.dsrc = "transformed"
+        self.dsrc, self.encoder, self.initial_transform = get_encoder(
+            n_dims, n_classes, n_patterns, l_patterns, args
+        )
 
-        self.initial_transform = None
-        if mode in ["dtw", "dtw_c"]:
-            self.initial_transform = dtw_mode[mode](
-                n_patts=enc_feats, d_patts=n_dims, l_patts=l_patterns,
-                l_out=wdw_len-l_patterns, rho=voting["rho"]/10)
-        elif mode in ["dtwfeats", "dtwfeats_c"]:
-            self.initial_transform = dtw_mode[mode](
-                n_patts=enc_feats, d_patts=n_dims, l_patts=l_patterns,
-                l_out=wdw_len-l_patterns, rho=voting["rho"])
+        # get latent size of encoder
+        if self.dsrc == "frame":
+            x_test = torch.randn((1, n_patterns, l_patterns, args.window_size))
+        else: # elif "series"
+            x_test = torch.randn((1, n_dims, args.window_size))
+        if not self.initial_transform is None:
+            x_test = self.initial_transform(x_test)
+        x_test = self.encoder(x_test)
+        print(x_test.shape[1])
 
-        self.encoder = encoder_dict[encoder_arch](channels=channels, ref_size=ref_size,
-            wdw_size=self.wdw_len, n_feature_maps=enc_feats)
-
-        if voting["n"] > 1:
-            self.voting = voting
-            self.voting["weights"] = (self.voting["rho"] ** (1/self.wdw_len)) \
-                ** torch.arange(self.voting["n"] - 1, -1, -1)
-
-        # create decoder
-        shape: torch.Tensor = self.encoder.get_output_shape()
-
-        inp_feats = torch.prod(torch.tensor(shape[1:]))
-        self.decoder = decoder_dict[decoder_arch](inp_feats=inp_feats,
-            hid_feats=dec_feats, out_feats=n_classes, hid_layers=dec_layers)
+        self.lbsrc, self.decoder = get_decoder(
+            n_dims, n_classes, x_test.shape[1:], args)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """ Forward pass. """
-        x=self.logits(x)
+        x = self.logits(x)
         x = self.softmax(x)
         return x
 
@@ -100,7 +155,6 @@ class DFWrapper(BaseWrapper):
         if not self.initial_transform is None:
             x = self.initial_transform(x)
         x = self.encoder(x)
-        x = self.flatten(x)
         x = self.decoder(x)
         return x
 
@@ -112,97 +166,14 @@ class DFWrapper(BaseWrapper):
         output = self.logits(batch[self.dsrc])
 
         # Compute the loss and metrics
-        loss = F.cross_entropy(output, batch["label"], ignore_index=100)
+        loss = F.cross_entropy(output, batch[self.lbsrc], ignore_index=100)
 
-        if stage == "train" or self.voting is None:
-            predictions = torch.argmax(output, dim=1)
-        if stage != "train" and not self.voting is None:
-            pred_prob = torch.softmax(output, dim=1)
+        predictions = torch.argmax(output, dim=1)
+        self.__getattr__(f"{stage}_cm").update(predictions, batch[self.lbsrc])
 
-            if self.previous_predictions is None:
-                pred_ = torch.cat(
-                    (torch.zeros((self.voting["n"]-1, self.n_classes)), pred_prob), dim=0)
-            else:
-                pred_ = torch.cat(
-                    (self.previous_predictions, pred_prob), dim=0)
-
-            self.previous_predictions = pred_prob[-(self.voting["n"]-1):,:]
-
-            predictions_weighted = torch.conv2d(
-                pred_[None, None, ...], self.voting["weights"][None, None, :, None])[0, 0]
-            predictions = predictions_weighted.argmax(dim=1)
-
-            self.probabilities.append(pred_prob)
-            self.labels.append(batch["label"])
-
-        self.__getattr__(f"{stage}_cm").update(predictions, batch["label"])
-        if stage != "train" and self.voting is None:
-            self.probabilities.append(torch.softmax(output, dim=1))
-            self.labels.append(batch["label"])
-
-        # log loss and metrics
-        self.log(
-            f"{stage}_loss", loss, on_epoch=True,
-            on_step=stage=="train", prog_bar=True, logger=True)
-
-        # return loss
-        if stage == "train":
-            return loss.to(torch.float32) + self.regularizer_loss()
-
-        return loss.to(torch.float32)
-
-class SegWrapper(BaseWrapper):
-
-    # pylint: disable=unused-argument unnecessary-dunder-call arguments-differ
-
-    def __init__(self, in_channels, latent_features, n_classes,
-            pooling, kernel_size, complexity_factor, lr,
-            weight_decayL1, weight_decayL2, arch, name=None, overlap=1, **kwargs) -> None:
-
-        # save parameters as attributes
-        super().__init__(lr, weight_decayL1, weight_decayL2, n_classes, **kwargs)
-
-        self.__dict__.update(locals())
-        self.save_hyperparameters()
-
-        if "unet" in arch:
-            self.segmentation = segmentation_dict[arch](in_channels, n_classes, latent_features)
-        elif "utime" in arch:
-            self.segmentation = segmentation_dict[arch](
-                n_classes=n_classes, in_dims=in_channels, depth = len(pooling),
-                dilation = 1, kernel_size = kernel_size, padding = "same",
-                init_filters = latent_features,
-                complexity_factor = complexity_factor, pools = pooling,
-                segment_size = 1, change_size = kernel_size)
-        elif "dlv3" in arch:
-            self.segmentation = segmentation_dict[arch](
-                in_channels, latent_features, n_classes, pooling)
-
-    def forward(self, x: torch.Tensor, idx: None) -> torch.Tensor:
-        x = self.logits(x)
-        return self.softmax(x)
-
-    def logits(self, x: torch.Tensor) -> torch.Tensor:
-        return self.segmentation(x)
-
-    def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
-
-        """ Inner step for the training, validation and testing. """
-
-        # Forward pass
-        output = self.logits(batch["series"])
-
-        skip = output.shape[-1] - self.overlap
-
-        # Compute the loss and metrics
-        loss = F.cross_entropy(output, batch["scs"], ignore_index=100)
-
-        predictions = torch.argmax(output, dim=1)[:, -skip:]
-
-        self.__getattr__(f"{stage}_cm").update(predictions, batch["scs"][:, -skip:])
         if stage != "train":
-            self.probabilities.append(torch.softmax(output, dim=1)[:, :, -skip:])
-            self.labels.append(batch["scs"][:, -skip:])
+            self.probabilities.append(torch.softmax(output, dim=1))
+            self.labels.append(batch[self.lbsrc])
 
         # log loss and metrics
         self.log(
@@ -214,6 +185,7 @@ class SegWrapper(BaseWrapper):
             return loss.to(torch.float32) + self.regularizer_loss()
 
         return loss.to(torch.float32)
+
 
 class ContrastiveWrapper(BaseWrapper):
 
@@ -455,167 +427,3 @@ class AutoencoderWrapper(BaseWrapper):
 
         self.log(f"{stage}_auroc", auroc, on_epoch=True, on_step=False, prog_bar=True, logger=True)
         self.log(f"{stage}_ap", aupr, on_epoch=True, on_step=False, prog_bar=True, logger=True)
-
-class GroupedWrapper(BaseWrapper):
-
-    # pylint: disable=unused-argument unnecessary-dunder-call arguments-differ
-
-    def __init__(self, encoder_arch, decoder_arch, n_classes, wdw_len,
-        enc_feats, dec_feats, dec_layers, lr, weight_decayL1, weight_decayL2, sensor_groups,
-        name="test", **kwargs) -> None:
-
-        # save parameters as attributes
-        super().__init__(
-            lr, weight_decayL1, weight_decayL2,
-            n_classes, **kwargs)
-
-        self.__dict__.update(locals())
-        self.voting = None
-        self.save_hyperparameters()
-
-        # create encoder
-        self.dsrc = "series"
-        self.sensor_groups = sensor_groups
-
-        inp_feats = 0
-        for i, group in enumerate(self.sensor_groups):
-            self.add_module(f"encoder{i}",
-                encoder_dict[encoder_arch](channels=group.shape[0], ref_size=1,
-                    wdw_size=self.wdw_len, n_feature_maps=enc_feats))
-
-            shape: torch.Tensor = self.__getattr__(f"encoder{i}").get_output_shape()
-            inp_feats += torch.prod(torch.tensor(shape[1:]))
-
-        self.decoder = decoder_dict[decoder_arch](inp_feats=inp_feats,
-            hid_feats=dec_feats, out_feats=n_classes, hid_layers=dec_layers)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """ Forward pass. """
-        x=self.logits(x)
-        x = self.softmax(x)
-        return x
-
-    def logits(self, x: torch.Tensor) -> torch.Tensor:
-        features = []
-        for i, group in enumerate(self.sensor_groups):
-            y = self.__getattr__(f"encoder{i}")(x[:, group, :])
-            features.append(y)
-        x = self.decoder(torch.cat(features, dim=-1))
-        return x
-
-    def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
-
-        """ Inner step for the training, validation and testing. """
-
-        # Forward pass
-        output = self.logits(batch[self.dsrc])
-
-        # Compute the loss and metrics
-        loss = F.cross_entropy(output, batch["label"], ignore_index=100)
-        predictions = torch.argmax(output, dim=1)
-
-        self.__getattr__(f"{stage}_cm").update(predictions, batch["label"])
-        if stage != "train":
-            self.probabilities.append(torch.softmax(output, dim=1))
-            self.labels.append(batch["label"])
-
-        # log loss and metrics
-        self.log(
-            f"{stage}_loss", loss, on_epoch=True,
-            on_step=stage=="train", prog_bar=True, logger=True)
-
-        # return loss
-        if stage == "train":
-            return loss.to(torch.float32) + self.regularizer_loss()
-
-        return loss.to(torch.float32)
-
-class RNNWrapper(BaseWrapper):
-
-    # pylint: disable=unused-argument unnecessary-dunder-call arguments-differ
-
-    def __init__(self, in_channels, enc_layers, latent_features, n_classes,
-            decoder_arch, dec_feats, dec_layers, lr,
-            weight_decayL1, weight_decayL2, name=None, **kwargs) -> None:
-
-        # save parameters as attributes
-        super().__init__(lr, weight_decayL1, weight_decayL2, n_classes, **kwargs)
-
-        self.__dict__.update(locals())
-        self.save_hyperparameters()
-
-        self.rnn = encoder_dict["lstm"](
-            channels=in_channels,
-            latent_size=latent_features,
-            n_layers=enc_layers
-        )
-
-        self.latent_features = latent_features
-
-        self.decoder = decoder_dict[decoder_arch](
-            inp_feats=latent_features,
-            hid_feats=dec_feats,
-            out_feats=n_classes,
-            hid_layers=dec_layers
-        )
-
-    def forward(self, x: torch.Tensor, idx: None) -> torch.Tensor:
-        x = self.logits(x)
-        return self.softmax(x)
-
-    def logits(self, x: torch.Tensor) -> torch.Tensor:
-        out, _ = self.rnn(x) # out has shape (n, ws, latent_feats)
-        out = out.reshape((-1, self.latent_features)) # out has shape (n * ws, latent_features)
-        out = self.decoder(out) # shape (n * ws, n_classes)
-        return out.view(x.shape[0], x.shape[2], -1).permute((0, 2, 1))
-
-    def _inner_step_train(self, batch: dict[str: torch.Tensor]):
-        # Forward pass
-        output = self.logits(batch["series"])
-
-        # Compute the loss and metrics
-        loss = F.cross_entropy(
-            output[:,:,output.shape[-1]//2:],
-            batch["scs"][:,output.shape[-1]//2:], ignore_index=100)
-
-        predictions = torch.argmax(output, dim=1)
-
-        self.__getattr__("train_cm").update(predictions, batch["scs"])
-
-        # log loss and metrics
-        self.log(
-            "stage_loss", loss, on_epoch=True,
-            on_step=True, prog_bar=True, logger=True)
-
-        # return loss
-        return loss.to(torch.float32) + self.regularizer_loss()
-
-    def _inner_step(self, batch: dict[str: torch.Tensor], stage: str = None):
-
-        """ Inner step for the training, validation and testing. """
-
-        if stage == "train":
-            return self._inner_step_train(batch)
-
-        # Forward pass
-        output = self.logits(batch["series"]) # (n, n_classes, window_size)
-
-        # get the last value
-        output = output[:,:,-1] # (n, n_classes)
-
-        # Compute the loss and metrics
-        loss = F.cross_entropy(output, batch["label"], ignore_index=100)
-
-        predictions = torch.argmax(output, dim=1)
-
-        self.__getattr__(f"{stage}_cm").update(predictions, batch["label"])
-        if stage != "train":
-            self.probabilities.append(torch.softmax(output, dim=1))
-            self.labels.append(batch["label"])
-
-        # log loss and metrics
-        self.log(
-            f"{stage}_loss", loss, on_epoch=True,
-            on_step=stage=="train", prog_bar=True, logger=True)
-
-        return loss.to(torch.float32)

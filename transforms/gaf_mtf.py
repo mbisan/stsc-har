@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import torch
+from torch import nn
 
 # Gramian Frames
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -90,3 +91,25 @@ def mtf_compute(
     X_mtf = X_mtf.reshape(X.shape + (X.shape[-1],))
 
     return X_mtf
+
+class GAFLayer(nn.Module):
+
+    def __init__(self, mode, scaling=(-1, 1)) -> None:
+        super().__init__()
+
+        self.mode = mode
+        self.scaling = scaling
+
+    def forward(self, X):
+        return gaf_compute(X, self.mode, self.scaling)
+
+class MTFLayer(nn.Module):
+
+    def __init__(self, bins, scaling=(-1, 1)) -> None:
+        super().__init__()
+
+        self.bins = bins
+        self.scaling = scaling
+
+    def forward(self, X):
+        return mtf_compute(X, self.bins, self.scaling)

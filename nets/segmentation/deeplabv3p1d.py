@@ -215,7 +215,7 @@ class ASPP1D(nn.Module):
         res = torch.cat(res, dim=1)
         return self.project(res)
 
-def get_model(in_channels, latent_features, n_classes, aspp_dilate=(2, 4)):
+def get_model(in_channels, n_classes, latent_features, aspp_dilate=(2, 4)):
     return DeepLabV3(
         CNN_TS(channels=in_channels, n_feature_maps=latent_features),
         DeepLabHeadV3Plus1D(4*latent_features, latent_features, n_classes, aspp_dilate=aspp_dilate))

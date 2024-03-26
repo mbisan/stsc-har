@@ -3,7 +3,7 @@
 import torch
 from torch import nn
 
-class RNN_ts(nn.Module):
+class LSTM_ts(nn.Module):
 
     def __init__(self, channels=1, latent_size=32,
             n_layers=2) -> None:
@@ -21,14 +21,17 @@ class RNN_ts(nn.Module):
             bidirectional=False,
         )
 
-    def forward(self, x: torch.Tensor, h_0: torch.Tensor = None):
+    def forward(self, x: torch.Tensor, h_0: torch.Tensor = None, return_hidden: bool = False):
         # x of shape (n, c, ws)
         x = x.permute((0, 2, 1))
         # x of shape (n, ws, c)
 
         out, (h_n, _) = self.rnn(x, h_0) # h_n of shape (n_layers, n, latent_size)
 
-        return out, h_n
+        if return_hidden:
+            return out, h_n
+
+        return out[:, -1, :] # return last latent features
 
     def get_output_shape(self):
         x = torch.rand((1, self.channels, 1))

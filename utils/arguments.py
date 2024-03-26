@@ -1,92 +1,63 @@
 from argparse import ArgumentParser
 import multiprocessing
+from dataclasses import dataclass
+from typing import Tuple
+
+@dataclass
+class Arguments:
+    # pylint: disable=line-too-long invalid-name
+    dataset: str = "" # Dataset name for training
+    dataset_dir: str = "./datasets" # Directory of the dataset
+    batch_size: int = 32
+    num_workers: int = multiprocessing.cpu_count() // 2
+    window_size: int = 32  # Window size of the dissimilarity frames fed to the classifier
+    window_stride: int = 1  # Stride used when extracting windows
+    normalize: bool = False  # Whether to normalize the dissimilarity frames and STS
+    pattern_size: int = 32  # Size of the pattern for computation of dissimilarity frames (not used)
+    compute_n: int = 500  # Number of samples extracted from the STS or Dissimilarity frames to compute medoids and/or means for normalization
+    subjects_for_test: Tuple[int] = None  # Subjects reserved for testing and validation
+    encoder_architecture: str = "cnn"  # Architecture used for the encoder
+    decoder_architecture: str = "mlp"  # Architecture of the decoder, mlp with hidden_layers 0 is equivalent to linear
+    max_epochs: int = 10
+    lr: float = 1e-3
+    decoder_features: int = None  # Number of features on decoder hidden layers, ignored when decoder_layers is 0
+    encoder_features: int = None
+    decoder_layers: int = 1
+    mode: str = "img"  # Mode of training, options: ts for time series as input for the model, img (default) for dissimilarity frames as input, dtw for dtw-layer encoding
+    reduce_imbalance: bool = False  # Whether to subsample imbalanced classes
+    label_mode: int = 1  # Consider the mode (most common) label out of this number of labels for training (default 1), must be an odd number
+    num_medoids: int = 1  # Number of medoids per class to use
+    voting: int = 1  # Number of previous predictions to consider in the vote of the next prediction, defaults to 1 (no voting)
+    rho: float = 0.1  # Parameter of the online-dtw algorithm the window_size-th root is used as the voting parameter
+    pattern_type: str = None  # Type of pattern to use during DM computation
+    overlap: int = -1  # Overlap of observations between training and test examples, default -1 for maximum overlap (equivalent to overlap set to window size -1)
+    mtf_bins: int = 10  # Number of bins for mtf computation
+    training_dir: str = "training"  # Directory of model checkpoints
+    n_val_subjects: int = 1  # Number of subjects for validation
+    cached: bool = False  # If not set the DF are computed to RAM, patterns are saved regardless
+    weight_decayL1: float = 0  # Parameter controlling L1 regularizer
+    weight_decayL2: float = 0  # Parameter controlling L2 regularizer
+    pooling: Tuple[int] = None  # Pooling in each layer of utime
+    cf: float = 1  # Complexity factor of utime
+    same_class: bool = False  # Same class windows only for training
+    encoder_layers: int = 1  # Layers of encoder
+    use_triplets: bool = False  # Return (random) triplets when accessing dataset
+    random_seed: int = 42  # Random seed set for RNGs
 
 def get_parser():
-    '''
-        dataset, dataset_dir, batch_size, num_workers, window_size, window_stride
-        normalize, pattern_size, compute_n, subjects_for_test, encoder_architecture
-        decoder_architecture, max_epochs, lr, decoder_features, encoder_features
-        decoder_layers, mode, reduce_imbalance, label_mode, num_medoids, voting
-        rho, pattern_type, overlap, mtf_bins, training_dir, n_val_subjects, cached
-        weight_decayL1, weight_decayL2, pooling, cf, encoder_layers, use_triplets
-    '''
     parser = ArgumentParser()
 
-    parser.add_argument("--dataset", type=str,
-        help="Dataset name for training")
-    parser.add_argument("--dataset_dir", default="./datasets", type=str,
-        help="Directory of the dataset")
-    parser.add_argument("--batch_size", default=32, type=int)
-    parser.add_argument("--num_workers", default=multiprocessing.cpu_count()//2, type=int)
-    parser.add_argument("--window_size", default=32, type=int,
-        help="Window size of the dissimilarity frames fed to the classifier")
-    parser.add_argument("--window_stride", default=1, type=int,
-        help="Stride used when extracting windows")
-    parser.add_argument("--normalize", action="store_true",
-        help="Wether to normalize the dissimilarity frames and STS")
-    parser.add_argument("--pattern_size", default=32, type=int,
-        help="Size of the pattern for computation of dissimilarity frames (not used)")
-    parser.add_argument("--compute_n", default=500, type=int,
-        help="""Number of samples extracted from the STS or Dissimilarity frames to
-        compute medoids and/or means for normalization""")
-    parser.add_argument("--subjects_for_test", nargs="+", type=int,
-        help="Subjects reserved for testing and validation")
-    parser.add_argument("--encoder_architecture", default="cnn", type=str,
-        help="Architecture used for the encoder")
-    parser.add_argument("--decoder_architecture", default="mlp", type=str,
-        help="Architecture of the decoder, mlp with hidden_layers 0 is equivatent to linear")
-    parser.add_argument("--max_epochs", default=10, type=int)
-    parser.add_argument("--lr", default=1e-3, type=float)
-    parser.add_argument("--decoder_features", default=None, type=int,
-        help="Number of features on decoder hidden layers, ignored when decoder_layers is 0")
-    parser.add_argument("--encoder_features", default=None, type=int)
-    parser.add_argument("--decoder_layers", default=1, type=int)
-    parser.add_argument("--mode", default="img", type=str,
-        help="""Mode of training, options: ts for time series as input for the model,
-        img (default) for dissimilarity frames as input, dtw for dtw-layer encoding""")
-    parser.add_argument("--reduce_imbalance", action="store_true",
-        help="Wether to subsample imbalanced classes")
-    parser.add_argument("--no-reduce_imbalance", dest="reduce_imbalance", action="store_false")
-    parser.add_argument("--label_mode", default=1, type=int,
-        help="""Consider the mode (most common) label out of this number of labels
-        for training (default 1), must be an odd number""")
-    parser.add_argument("--num_medoids", default=1, type=int,
-        help="Number of medoids per class to use")
-    parser.add_argument("--voting", default=1, type=int,
-        help="""Number of previous predictions to consider in the vote of the next prediction
-        defaults to 1 (no voting)""")
-    parser.add_argument("--rho", default=0.1, type=float,
-        help="""Parameter of the online-dtw algorithm
-        the window_size-th root is used as the voting parameter""")
-    parser.add_argument("--pattern_type", type=str, default=None,
-        help="Type of pattern to use during DM computation") # pattern types: "med"
-    parser.add_argument("--overlap", default=-1, type=int,
-        help="""Overlap of observations between training and test examples
-        default -1 for maximum overlap (equivalent to overlap set to window size -1)""")
-    parser.add_argument("--mtf_bins", default=10, type=int,
-        help="Number of bins for mtf computation")
-    parser.add_argument("--training_dir", default="training", type=str,
-        help="Directory of model checkpoints")
-    parser.add_argument("--n_val_subjects", default=1, type=int,
-        help="Number of subjects for validation")
-    parser.add_argument("--cached", action="store_true",
-        help="If not set the DF are computed to RAM, patterns are saved regardless")
-    parser.add_argument("--weight_decayL1", default=0, type=float,
-        help="Parameter controlling L1 regularizer")
-    parser.add_argument("--weight_decayL2", default=0, type=float,
-        help="Parameter controlling L2 regularizer")
-    parser.add_argument("--pooling", nargs="+", type=int, default=None,
-        help="Pooling in each layer of utime")
-    parser.add_argument("--cf", default=1, type=float,
-        help="Complexity factor of utime")
-    parser.add_argument("--same_class", action="store_true",
-        help="Same class windows only for training")
-    parser.add_argument("--encoder_layers", type=int, default=1,
-        help="Layers of encoder")
-    parser.add_argument("--use_triplets", action="store_true",
-        help="Return (random) triplets when accessing dataset")
-    parser.add_argument("--random_seed", type=int, default=42,
-        help="Random seed set for RNGs")
+    for argument, typehint in Arguments.__annotations__.items():
+        if typehint == bool:
+            parser.add_argument(
+                f"--{argument}",
+                action="store_false" if Arguments.__dict__[argument] else "store_true")
+        elif typehint == Tuple[int]:
+            parser.add_argument(
+                f"--{argument}", nargs="+", type=int, default=Arguments.__dict__[argument])
+        else:
+            parser.add_argument(
+                f"--{argument}", type=typehint, default=Arguments.__dict__[argument])
 
     return parser
 

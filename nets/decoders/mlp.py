@@ -11,6 +11,8 @@ class MultiLayerPerceptron(nn.Module):
 
         super().__init__()
 
+        self.flatten = nn.Flatten(start_dim=1)
+
         assert hid_layers >= 0
 
         self.hid_layers = hid_layers
@@ -24,6 +26,7 @@ class MultiLayerPerceptron(nn.Module):
             in_features=self.features[hid_layers], out_features=self.features[-1])
 
     def forward(self, x):
+        x = self.flatten(x)
         for hl in range(self.hid_layers):
             x = getattr(self, f"fcn_layer_{hl}")(x)
             x = getattr(self, f"act_layer_{hl}")(x)

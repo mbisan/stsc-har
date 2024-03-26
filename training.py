@@ -8,21 +8,20 @@ import subprocess
 import warnings
 
 from pytorch_lightning import seed_everything
-import numpy as np
 
 from utils.helper_functions import load_dm, cm_str
 from utils.methods import train_model, PLKWargs, MetricsSetting
 
-from utils.arguments import get_parser, get_model_name
+from utils.arguments import get_parser, get_model_name, Arguments
 
 from nets.wrapper import (
-    DFWrapper, SegWrapper, ContrastiveWrapper, AutoencoderWrapper, RNNWrapper
+    ClassifierWrapper, ContrastiveWrapper, AutoencoderWrapper
 )
 
 # shut up warnings
 warnings.simplefilter("ignore", category=UserWarning)
 
-def main(args):
+def main(args: Arguments):
     dm = load_dm(args)
 
     modelname = get_model_name(args)
@@ -30,13 +29,7 @@ def main(args):
 
     print("\n" + modelname)
 
-    if args.mode == "seg":
-        model = SegWrapper(
-            dm.n_dims, args.encoder_features, dm.n_classes, args.pooling, args.pattern_size,
-            args.cf, args.lr, args.weight_decayL1, args.weight_decayL2, args.encoder_architecture,
-            modelname, args.overlap if args.overlap>=0 else args.window_size - 1, monitor="val_re")
-        modeltype = SegWrapper
-    elif "clr" in args.mode:
+    if "clr" in args.mode:
         model = ContrastiveWrapper(
             args.encoder_architecture, dm.n_dims, args.encoder_features,
             args.lr, args.weight_decayL1, args.weight_decayL2, modelname,
@@ -50,37 +43,15 @@ def main(args):
             monitor="val_loss", optimizer_mode="min"
         )
         modeltype = AutoencoderWrapper
-    elif args.mode == "lstm":
-        model = RNNWrapper(
-            dm.n_dims, args.encoder_layers, args.encoder_features, dm.n_classes,
-            args.decoder_architecture,
-            args.decoder_features, args.decoder_layers,
-            args.lr, args.weight_decayL1, args.weight_decayL2,
-            modelname, monitor="val_re"
-        )
-        modeltype = RNNWrapper
     else:
-        model = DFWrapper(
-            args.mode,
-            args.encoder_architecture, args.decoder_architecture,
-            dm.n_dims, dm.n_classes, dm.n_patterns, dm.l_patterns, dm.wdw_len, dm.wdw_str,
-            args.encoder_features, args.decoder_features, args.decoder_layers,
-            args.lr, {"n": args.voting, "rho": args.rho},
-            args.weight_decayL1, args.weight_decayL2, modelname, monitor="val_re")
-        modeltype = DFWrapper
-
-    # save computed patterns for later use
-    if not os.path.exists(os.path.join(args.training_dir)):
-        os.mkdir(os.path.join(args.training_dir))
-    if not os.path.exists(os.path.join(args.training_dir, modeldir)):
-        os.mkdir(os.path.join(args.training_dir, modeldir))
-    if hasattr(dm, "dfds"):
-        with open(os.path.join(args.training_dir, modeldir, "pattern.npz"), "wb") as f:
-            np.save(f, dm.dfds.patterns)
+        model = ClassifierWrapper(
+            dm.n_dims, dm.n_classes, dm.n_patterns, dm.l_patterns,
+            args, modelname, monitor="val_re")
+        modeltype = ClassifierWrapper
 
     print("\n" + "Start training:")
     model, data = train_model(dm, model, max_epochs=args.max_epochs,
-        pl_kwargs=PLKWargs(args.training_dir, "auto", 42),
+        pl_kwargs=PLKWargs(args.training_dir, "auto", args.random_seed),
         metrics=MetricsSetting(model.monitor, model.optimizer_mode), modeltype=modeltype)
 
     data = {
@@ -101,7 +72,7 @@ if __name__ == "__main__":
     start_time = time()
 
     parser = get_parser()
-    _args = parser.parse_args()
+    _args = Arguments(**vars(parser.parse_args()))
 
     seed_everything(42)
 

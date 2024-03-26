@@ -66,7 +66,7 @@ class STSDataset(Dataset):
 
         self.stream = np.concatenate(
             [np.concatenate([sts for sts, _ in user if sts.shape[0] > wsize]) for user in data]
-        )
+        ).astype(np.float32)
 
         self.labels = label_mapping[np.concatenate(
             [np.concatenate(

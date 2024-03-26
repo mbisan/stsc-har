@@ -8,7 +8,7 @@ from torch.nn import functional as F
 
 class UNET(nn.Module):
 
-    def __init__(self, in_features, num_classes, latent_features) -> None:
+    def __init__(self, in_features, num_classes, latent_features, _) -> None:
         super().__init__()
 
         self.cnn_0 = nn.Sequential(OrderedDict([
