@@ -97,8 +97,8 @@ class DFDataset(STSDataset):
             self.stream[far_first:far_last:self.wstride].T
             ),
             "df_triplet": (
-                close_df.transpose((1, 2, 0)),
-                far_df.transpose((1, 2, 0))
+                close_df.copy().transpose((1, 2, 0)),
+                far_df.copy().transpose((1, 2, 0))
             )
         }
 
@@ -117,12 +117,12 @@ class DFDataset(STSDataset):
         split = self.id_to_split[pos]
         dm_first = first - self.splits[split]
         dm_last = last - self.splits[split]
-        df = self.DM[split][dm_first:dm_last:self.wstride].transpose((1, 2, 0))
+        df: np.ndarray = self.DM[split][dm_first:dm_last:self.wstride]
 
         return {
             "series": self.stream[first:last:self.wstride].T,
             "scs": scs,
             "label": c,
-            "frame": df,
+            "frame": df.copy().transpose((1, 2, 0)),
             **(self.triplet(c) if self.get_triplets else {"triplet": 0, "frame_triplet": 0})
         }

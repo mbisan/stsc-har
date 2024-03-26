@@ -140,7 +140,7 @@ class ClassifierWrapper(BaseWrapper):
         if not self.initial_transform is None:
             x_test = self.initial_transform(x_test)
         x_test = self.encoder(x_test)
-        print(x_test.shape[1])
+        print("Latent shape:", tuple(x_test.shape[1:]))
 
         self.lbsrc, self.decoder = get_decoder(
             n_dims, n_classes, x_test.shape[1:], args)

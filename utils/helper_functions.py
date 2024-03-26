@@ -6,6 +6,7 @@ import os
 
 from data_2.dfdataset import PatternConf
 from data_2.datamodule import STSDataModule
+from utils.arguments import Arguments
 
 def cm_str(cm):
     if cm is None:
@@ -16,7 +17,7 @@ def cm_str(cm):
     str_res = str_res[:-2] + "\n  <>]"
     return str_res
 
-def load_dm(args):
+def load_dm(args: Arguments):
     dm = STSDataModule(
         args.dataset,
         os.path.join(args.dataset_dir, args.dataset),
