@@ -93,6 +93,9 @@ def display_cm_and_metrics(cm):
     print_cm(cm, cm.shape[0])
     copy = ""
     for key, value in metrics_from_cm(cm).items():
+        if isinstance(value, float):
+            print(f"{key:>10} -> {value:.5f}")
+            continue
         value = value[~value.isnan()]
         m = value.mean().item()
         s = value.std().item()
