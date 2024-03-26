@@ -9,9 +9,7 @@ import warnings
 
 from pytorch_lightning import seed_everything
 
-from utils.helper_functions import load_dm, cm_str
-from utils.methods import train_model, PLKWargs, MetricsSetting
-
+from utils.methods import train_model, PLKWargs, MetricsSetting, load_dm, cm_str
 from utils.arguments import get_parser, get_model_name, Arguments
 
 from nets.wrapper import (
