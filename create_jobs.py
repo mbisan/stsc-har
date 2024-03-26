@@ -12,6 +12,7 @@ def create_jobs(args_list):
 
     jobname = f"{args_list[0].mode}_{args_list[0].dataset}"
 
+    command = ""
     job = f'''#!/bin/bash
 
 #SBATCH --nodes=1
@@ -29,9 +30,10 @@ source $HOME/.bashrc
 source activate dev2
 '''
     for args in args_list:
-        job += f"\npython {args.command} {get_command(args)}"
+        command = f"\npython {args.command} {get_command(args)}"
 
-    return jobname, job
+    job += command
+    return jobname, job, command
 
 class EmptyExperiment:
     pass
@@ -72,6 +74,7 @@ def produce_experiments(args, exps_per_job=3):
                 setattr(experiment_arg, key, value)
 
     jobs = []
+    commands = []
 
     save_dir = os.path.join("./", experiment_arguments[0].training_dir, "cache_jobs")
     if not os.path.exists(os.path.dirname(save_dir)):
@@ -83,20 +86,22 @@ def produce_experiments(args, exps_per_job=3):
 
     for i in range(0, len(experiment_arguments), exps_per_job):
         last = min(i+exps_per_job, len(experiment_arguments))
-        jobname, job = create_jobs(experiment_arguments[i:last])
+        jobname, job, command = create_jobs(experiment_arguments[i:last])
         jobname += f"{i}.job"
+        commands.append(command)
         jobs.append("sbatch " + jobname)
         with open(os.path.join(save_dir, jobname), "w", encoding="utf-8") as file:
             file.write(job)
 
     print("Created", len(jobs), "jobs")
 
-    return jobs, save_dir
+    return jobs, commands, save_dir
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--dir", type=str, default="./")
     parser.add_argument("--exps_per_job", type=int, default=3)
+    parser.add_argument("--local", action="store_true")
 
     args_ = parser.parse_args()
 
@@ -108,10 +113,13 @@ if __name__ == "__main__":
     single_launch_script = "#!\\bin\\bash\n"
 
     for exp_args in experiments:
-        all_jobs, cache_dir = produce_experiments(
+        all_jobs, all_commands, cache_dir = produce_experiments(
             {**baseArguments, **exp_args}, exps_per_job=args_.exps_per_job)
 
-        single_launch_script += f"cd {cache_dir}\n" + "\n".join(all_jobs) + "\ncd ../..\n"
+        if args_.local:
+            single_launch_script += f"cd {cache_dir}\n" + "\n".join(all_commands) + "\ncd ../..\n"
+        else:
+            single_launch_script += f"cd {cache_dir}\n" + "\n".join(all_jobs) + "\ncd ../..\n"
 
         # with open(os.path.join(cache_dir, "launch.sh"), "w", encoding="utf-8") as f:
         #     f.write("#!\\bin\\bash\n" + "\n".join(all_jobs)) # bash script
