@@ -63,22 +63,28 @@ def get_parser():
     return parser
 
 
-def get_model_name(args):
-    modelname = ""
+def get_model_name(args: Arguments):
+    modelname = f"{args.mode}-{args.dataset}"
+    modelname += f"{'-'.join([f'{val:02d}' for val in args.subjects_for_test])}"
+    modelname += f"_{args.n_val_subjects}" + \
+        f"w{args.window_size}" + (f"s{args.window_stride}" if args.window_size > 1 else "") + "-"
 
-    for element, value in args.__dict__.items():
-        if element in ["command", "ram", "cpus", "dataset_dir", "training_dir"]:
+    for element, value in sorted(args.__dict__.items()):
+        if element in [
+            "command", "ram", "cpus", "dataset_dir", "training_dir",
+            "dataset", "subjects_for_test", "mode", "n_val_subjects", "window_size", "window_stride"
+            ]:
             continue
         if isinstance(value, bool):
             if value:
-                modelname += f"{element[0]}"
+                modelname += f"B{element[0]}"
         elif isinstance(value, list):
             modelname += f"{element[0]}"
             modelname += '-'.join([str(val) for val in value])
         elif isinstance(value, int):
             modelname += f"{element[0]}{value}"
         elif isinstance(value, str):
-            modelname += f"{value}"
+            modelname += f"{value.upper()}"
         elif isinstance(value, float):
             modelname += f"{element[0]}{value:.1E}"
 
