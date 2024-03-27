@@ -4,6 +4,23 @@ import torch.cuda
 from numba import cuda
 
 @cuda.jit
+def dtw_fill_first_line(dtw: torch.Tensor, w:float):
+    '''
+        dtw of shape (n, k, pattern_len, window_size)
+    '''
+    # pylint: disable=unbalanced-tuple-unpacking no-value-for-parameter comparison-with-callable
+
+    n, k, _, len_window = dtw.shape
+
+    x, y = cuda.grid(2)
+
+    if x < n and y < k:
+        for j in range(1, len_window): # ws
+            dtw[x, y, 0, j] += w * dtw[x, y, 0, j-1]
+
+        cuda.syncthreads()
+
+@cuda.jit
 def dtw_fill(dtw, w):
     '''
         dtw of shape (n, k, pattern_len, window_size)
@@ -82,7 +99,7 @@ def dtw_forward(x: torch.Tensor, y: torch.Tensor, w: float):
     #     p_diff /= euc_d[:,:, None, :, :] + eps
 
     # compute dtw
-    euc_d[:,:,0,:] = torch.cumsum(euc_d[:,:,0,:], dim=2)
+    dtw_fill_first_line(euc_d, w)
     euc_d[:,:,:,0] = torch.cumsum(euc_d[:,:,:,0], dim=2)
 
     dtw_fill[(16, 16), (16, 16)](cuda.as_cuda_array(euc_d), w)
