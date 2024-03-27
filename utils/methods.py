@@ -44,6 +44,7 @@ def load_dm(args: Arguments):
         args.n_val_subjects,
         args.overlap,
         PatternConf(args.pattern_type, args.pattern_size, args.rho, args.cached, args.compute_n),
+        args.pattern_stride,
         args.use_triplets
     )
 

@@ -8,12 +8,12 @@ import torch.nn as nn
 from sklearn.metrics import average_precision_score, roc_curve, auc
 
 from utils.transforms.gaf_mtf import GAFLayer, MTFLayer
+from utils.arguments import Arguments
 
 from nets import encoder_dict, decoder_dict, segmentation_dict
 from nets.baseWrapper import BaseWrapper
 from nets.losses import SupConLoss, TripletLoss
 
-from utils.arguments import Arguments
 
 # pylint: disable=too-many-ancestors too-many-arguments too-many-locals
 

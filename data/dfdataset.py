@@ -27,7 +27,8 @@ class DFDataset(STSDataset):
             label_mode: int = 0,
             feature_group: List[np.ndarray] = None,
             triplets: bool = False,
-            computed_patterns: np.ndarray = None
+            computed_patterns: np.ndarray = None,
+            pattern_stride: int = 1
             ) -> None:
         '''
             patterns: shape (n_shapes, channels, pattern_size)
@@ -44,6 +45,7 @@ class DFDataset(STSDataset):
         else:
             self.patterns = computed_patterns
         self.rho = patterns.rho
+        self.pattern_stride = pattern_stride
 
         self.DM = []
 
@@ -65,6 +67,7 @@ class DFDataset(STSDataset):
             DM = compute_oDTW_channel(
                 self.stream[split[0]:split[1], :].T, pattern, rho=self.rho)
 
+        DM = DM[:, ((DM.shape[1]-1)%self.pattern_stride)::self.pattern_stride, :]
         # put time dimension in the first dimension
         DM = np.ascontiguousarray(np.transpose(DM, (2, 0, 1)))
         # therefore, DM has dimensions (n, num_frames, patt_len)

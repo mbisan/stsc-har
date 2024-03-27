@@ -43,6 +43,7 @@ class Arguments:
     encoder_layers: int = 1  # Layers of encoder
     use_triplets: bool = False  # Return (random) triplets when accessing dataset
     random_seed: int = 42  # Random seed set for RNGs
+    pattern_stride: int = 1 # stride of the dissimilarity frames
 
 def get_parser():
     parser = ArgumentParser()

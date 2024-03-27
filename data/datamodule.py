@@ -1,5 +1,4 @@
 from typing import List
-from collections import namedtuple
 
 import numpy as np
 
@@ -7,13 +6,11 @@ from torch.utils.data import DataLoader, WeightedRandomSampler, Sampler
 from pytorch_lightning import LightningDataModule, seed_everything
 
 from data.stsdataset import STSDataset
-from data.dfdataset import DFDataset
+from data.dfdataset import DFDataset, PatternConf
 from data.har.har_datasets import load_dataset
 
 from data.har.label_mappings import mappings
 
-PatternConf = namedtuple("PatternConf",
-    ["pattern_type", "pattern_size", "rho", "cached", "compute_n"])
 
 class CustomRandomSampler(Sampler):
 
@@ -61,6 +58,7 @@ class STSDataModule(LightningDataModule):
             n_val_subjects: int = 2,
             overlap: int = -1,
             patterns = PatternConf(None, None, .1, False, 300),
+            pattern_stride: int = 1,
             triplets: bool = False
             ) -> None:
         # pylint: disable=too-many-arguments too-many-locals
@@ -74,7 +72,6 @@ class STSDataModule(LightningDataModule):
         self.num_workers = num_workers
         self.wdw_len = window_size
         self.wdw_str = window_stride
-        self.l_patterns = patterns.pattern_size
 
         dataset = load_dataset(dataset_dir)
 
@@ -91,6 +88,7 @@ class STSDataModule(LightningDataModule):
                 label_mapping=mappings[dataset_name],
                 label_mode=label_mode,
                 triplets=triplets,
+                pattern_stride=pattern_stride
             )
             self.val_dataset = DFDataset(
                 data=[data for i, data in enumerate(dataset) if i in val_subjects],
@@ -99,7 +97,8 @@ class STSDataModule(LightningDataModule):
                 minmax=self.train_dataset.minmax,
                 label_mapping=mappings[dataset_name],
                 label_mode=label_mode,
-                computed_patterns=self.train_dataset.patterns
+                computed_patterns=self.train_dataset.patterns,
+                pattern_stride=pattern_stride
             )
             self.test_dataset = DFDataset(
                 data=[data for i, data in enumerate(dataset) if i in subjects_for_test],
@@ -108,8 +107,10 @@ class STSDataModule(LightningDataModule):
                 minmax=self.train_dataset.minmax,
                 label_mapping=mappings[dataset_name],
                 label_mode=label_mode,
-                computed_patterns=self.train_dataset.patterns
+                computed_patterns=self.train_dataset.patterns,
+                pattern_stride=pattern_stride
             )
+            self.l_patterns = self.train_dataset.DM[0].shape[-1]
         else:
             self.train_dataset = STSDataset(
                 data=[data for i, data in enumerate(dataset) if not i in not_train],
@@ -135,6 +136,7 @@ class STSDataModule(LightningDataModule):
                 label_mapping=mappings[dataset_name],
                 label_mode=label_mode,
             )
+            self.l_patterns = self.train_dataset.stream.shape[1] # i.e. self.n_dims
 
         # gather dataset info
         self.n_dims = self.train_dataset.stream.shape[1]
