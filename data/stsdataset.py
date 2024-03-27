@@ -124,8 +124,8 @@ class STSDataset(Dataset):
         return weights
 
     def points_to_remove(self) -> np.ndarray:
-        splits_remove = np.tile(self.splits, (self.wsize, 1))
-        for i in range(self.wsize):
+        splits_remove = np.tile(self.splits, (self.wsize*self.wstride, 1))
+        for i in range(self.wsize*self.wstride):
             splits_remove[i] += i
         return splits_remove
 
