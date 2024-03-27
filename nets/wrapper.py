@@ -14,6 +14,7 @@ from nets import encoder_dict, decoder_dict, segmentation_dict
 from nets.baseWrapper import BaseWrapper
 from nets.losses import SupConLoss, TripletLoss
 
+from nets.dtw.dtw_frames_pycuda import DTWFramesLayerCUDA
 
 # pylint: disable=too-many-ancestors too-many-arguments too-many-locals
 
@@ -64,6 +65,15 @@ def get_encoder(
             encoder_dict[args.encoder_architecture](
                 channels=n_dims, ref_size=1,
                 wdw_size=args.window_size, n_feature_maps=args.encoder_features), None)
+    if args.mode=="dtw_df":
+        return (
+            "series",
+            encoder_dict[args.encoder_architecture](
+                channels=args.encoder_features, ref_size=l_patterns,
+                wdw_size=args.pattern_size, n_feature_maps=args.encoder_features),
+            DTWFramesLayerCUDA(
+                args.encoder_features, n_dims,
+                args.pattern_size, args.pattern_size, args.rho))
     if args.mode=="dtw":
         return (
             "series",
