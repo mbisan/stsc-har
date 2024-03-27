@@ -51,7 +51,7 @@ def mtm_compute(X_binned: torch.Tensor, n_bins: int) -> torch.Tensor:
     # indices to sum +1
     indices = current_bin * n_bins + next_bin
 
-    X_mtm = torch.zeros(X_binned.shape[:-1] + (n_bins, n_bins))
+    X_mtm = torch.zeros(X_binned.shape[:-1] + (n_bins, n_bins), device=X_binned.device)
     X_mtm.view(-1, n_bins*n_bins).scatter_add_(
         1, indices, torch.ones_like(indices, dtype=X_mtm.dtype))
 
@@ -75,7 +75,7 @@ def mtf_compute(
 
     X_scaled = minmax_scaler(X, scaling)
     wsize = X.shape[-1]
-    bins_boundaries = torch.linspace(scaling[0], scaling[1], bins+1)[1:-1]
+    bins_boundaries = torch.linspace(scaling[0], scaling[1], bins+1, device=X.device)[1:-1]
 
     X_binned = torch.bucketize(X_scaled, bins_boundaries)
     n_bins = bins_boundaries.numel() + 1
@@ -83,12 +83,10 @@ def mtf_compute(
     X_mtm = mtm_compute(X_binned, n_bins) # (..., N, d, bins, bins)
 
     # X_mtf[i, j, k] = X_mtm[i, X_binned[i, j], X_binned[i, k]]
-    jkindices = torch.arange(wsize*wsize)
-    indices = n_bins * X_binned.view(-1, wsize)[:,jkindices // wsize] + \
-        X_binned.view(-1, wsize)[:,jkindices % wsize]
-
-    X_mtf = X_mtm.view(-1, n_bins*n_bins)[torch.arange(indices.shape[0])[:, None], indices]
-    X_mtf = X_mtf.reshape(X.shape + (X.shape[-1],))
+    X_binned_flat = X_binned.view(-1, wsize)
+    indices = n_bins * X_binned_flat[:, :, None] + X_binned_flat[:, None, :]
+    X_mtf_flat = X_mtm.view(-1, n_bins * n_bins)
+    X_mtf = torch.gather(X_mtf_flat, 1, indices.view(indices.size(0), -1)).view(X.shape + (wsize,))
 
     return X_mtf
 
